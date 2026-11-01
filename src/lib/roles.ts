@@ -19,23 +19,26 @@ export interface NavItem {
   label: string;
   /** the stage in which this screen is built - everything below is a labelled placeholder today */
   arrives: string;
+  /** set once the screen exists; items without a path stay labelled placeholders */
+  path?: string;
 }
 
 export const NAV: Record<RoleCode, NavItem[]> = {
   HO: [
     { label: 'Dashboard', arrives: 'Stage 7' },
-    { label: 'Master data', arrives: 'Stage 4' },
-    { label: 'My change requests', arrives: 'Stage 4' },
+    { label: 'Vendor Master', arrives: 'Stage 4', path: '/ho/vendors' },
+    { label: 'Other master data', arrives: 'Stage 4' },
+    { label: 'My change requests', arrives: 'Stage 4', path: '/ho/requests' },
     { label: 'Purchase Indent', arrives: 'Stage 4' },
     { label: 'Allocation Requests', arrives: 'Stage 4' },
     { label: 'Maintenance Pending', arrives: 'Stage 4' },
     { label: 'Reports', arrives: 'Stage 7' },
   ],
   AM: [
-    { label: 'Master change approvals', arrives: 'Stage 4' },
+    { label: 'Master change approvals', arrives: 'Stage 4', path: '/am/approvals' },
     { label: 'Operational approvals', arrives: 'Stage 4' },
-    { label: 'Approval history', arrives: 'Stage 4' },
-    { label: 'Master registers (read)', arrives: 'Stage 4' },
+    { label: 'Approval history', arrives: 'Stage 4', path: '/am/history' },
+    { label: 'Vendor Master (read)', arrives: 'Stage 4', path: '/am/vendors' },
     { label: 'Dashboard', arrives: 'Stage 7' },
   ],
   SUP: [

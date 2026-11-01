@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { LogOut } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { NAV, ROLE_INFO } from '../lib/roles';
 
@@ -39,8 +40,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* small screens: horizontal strip */}
       <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 md:hidden" aria-label="Sections (placeholders)">
-        {nav.map((n) => (
-          <span key={n.label} className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-600">
+        <NavLink to={info.home} end className={({ isActive }) => `whitespace-nowrap rounded-full px-3 py-1.5 text-xs ${isActive ? 'bg-[#1d70f5] text-white' : 'bg-slate-100 text-slate-700'}`}>Home</NavLink>
+        {nav.map((n) => n.path ? (
+          <NavLink key={n.label} to={n.path} className={({ isActive }) => `whitespace-nowrap rounded-full px-3 py-1.5 text-xs ${isActive ? 'bg-[#1d70f5] text-white' : 'bg-slate-100 text-slate-700'}`}>
+            {n.label}
+          </NavLink>
+        ) : (
+          <span key={n.label} className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-400">
             {n.label}
           </span>
         ))}
@@ -49,8 +55,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex flex-1">
         <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white p-3 md:block" aria-label="Sections (placeholders)">
           <ul className="space-y-1">
-            {nav.map((n) => (
-              <li key={n.label} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-slate-500">
+            <li>
+              <NavLink to={info.home} end className={({ isActive }) => `block rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-blue-50 font-semibold text-[#1d70f5]' : 'text-slate-700 hover:bg-slate-50'}`}>Home</NavLink>
+            </li>
+            {nav.map((n) => n.path ? (
+              <li key={n.label}>
+                <NavLink to={n.path} className={({ isActive }) => `block rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-blue-50 font-semibold text-[#1d70f5]' : 'text-slate-700 hover:bg-slate-50'}`}>{n.label}</NavLink>
+              </li>
+            ) : (
+              <li key={n.label} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-slate-400">
                 <span>{n.label}</span>
                 <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">{n.arrives}</span>
               </li>
