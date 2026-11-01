@@ -89,7 +89,7 @@ git remote add origin https://github.com/BrownJoshua/Testing-Depot-Tyre-Applicat
 | # | Item | Status |
 |---|---|---|
 | G-1 | Your approval of Stage 2 and Stage 2.1 documents (including the 11 new tables, the MRN→GRN merge, the 27th master entity) | **done** |
-| G-2 | **UQ-12**: one-account Auth test authorised; you run it locally, I guide; service-role key stays on your machine | **decided** — waiting for keys to be ready |
+| G-2 | **UQ-12**: one-account Auth test | **DONE — all checks passed on 1 Nov 2026**; domain `mtc-erp-demo.invalid` (see login design §8.3) |
 | G-3 | **UQ-30**: you set up Git yourself | **decided** — waiting for your confirmation that it is done |
 
 ### 2.2 Not needed for Stage 3

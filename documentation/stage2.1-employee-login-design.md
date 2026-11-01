@@ -2,7 +2,7 @@
 
 Implements UQ-11 (provisioning by a separate administrator script) and UQ-12 (synthetic-email mapping, tested with one account first).
 
-**Nothing has been created or tested.** No Supabase user, project setting or script exists. The feasibility test described in §8 is a plan: you asked for it before bulk provisioning, and also asked that no demo users be created in this stage, so it waits for your explicit go-ahead and credentials (§8.1).
+**Update (Stage 3, step 1): the feasibility test has been run and passed** — see §8.3. The domain is `mtc-erp-demo.invalid`. The rest of this document is the approved design.
 
 ---
 
@@ -136,6 +136,31 @@ Stage 2.1 forbids creating demo users, and I have no Supabase credentials. The t
 
 Bulk provisioning is designed **only after steps 1–7 pass**. If no domain works, the fallbacks are: (a) a domain you control (candidate 2), or (b) a thin Edge Function that authenticates the Employee ID server-side and exchanges it for a session — a larger design that I would bring back to you rather than adopt silently.
 
+### 8.3 Result of the test (run on 1 Nov 2026)
+
+**All checks passed.** Run by the project owner on their own machine with `supabase/admin/auth-feasibility-test.mjs`; project `hfvjhzxgehyiuuqtfntz`.
+
+| Check | Result |
+|---|---|
+| 0. Public sign-up switched off (it was **on** at the start; the owner turned it off, then the script confirmed `disable_signup = true`) | PASS |
+| 0b. Secret key accepted by the Auth admin API (read-only call) | PASS |
+| 1. One test user created with a synthetic email | PASS — **`mtc-erp-demo.invalid` accepted** (first candidate; the other two were not needed) |
+| 2. Sign-in with the Employee-ID-derived email and password | PASS |
+| 3. Wrong password and unknown ID give the identical generic failure (`400 Invalid login credentials`) | PASS |
+| 4. Token belongs to the created user, role claim is only `authenticated`; `user_metadata` holds only `email_verified` | PASS |
+| 5. Banned user cannot sign in or refresh; unbanned user can sign in again | PASS |
+| 6. Administrator password reset: old password fails, new works | PASS |
+| 7. Test user deleted; sign-in fails (400) and lookup returns 404 | PASS |
+
+**Decision:** the synthetic email domain is `mtc-erp-demo.invalid` (set as `VITE_AUTH_EMAIL_DOMAIN` in the local `.env`). Employee `TIC-1147` signs in as `tic-1147@mtc-erp-demo.invalid`.
+
+**Not covered by this test (carried into Stage 3):**
+- an actual sign-up attempt from the browser was not made (to avoid creating an account if the setting were wrong); the check relied on the public settings flag `disable_signup`, and Stage 3 adds an automated negative test;
+- revoking *existing sessions* on password reset was not exercised (the ban/refresh check passed);
+- behaviour with a real front-end client (supabase-js) will be confirmed when the login page is built;
+- the new-style `sb_secret_` key worked with the `apikey` header alone.
+
+**Incident recorded:** during the first attempt the secret key was pasted into a visible prompt and appeared in a screenshot sent to the assistant. It was **rotated** immediately; the test was repeated with the new key. The script now prints a key-shape check and says not to re-paste the key.
 ## 9. Administrator script — secure execution
 
 ### 9.1 What it is

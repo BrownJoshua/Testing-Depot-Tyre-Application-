@@ -21,7 +21,7 @@ No answer below has been assumed. Where a question is open the design keeps the 
 | UQ-08 | Allocation Requests form and flow | Superseded: the prototype runtime defines it (tyre-by-tyre allocation from Central Store arrivals; HO → AM; depot GRN). See `stage2.1-central-store-tyre-creation.md` | detail rules → UQ-37 |
 | UQ-10 | Who creates individual tyre records | **Central Store receipt creates every tyre**; HO may request corrections via HO → AM; original and history preserved | operator UQ-33; number format UQ-34; whitelist UQ-38 |
 | UQ-11 | Who provisions logins | **Separate project-administrator script**, not an ERP role | execution arrangement is in UQ-12 |
-| UQ-12 | Employee-ID login and the feasibility test | Mapping design approved. **Decision: you run the one-account test locally with my guidance**; keys stay on your machine, never in chat | result of the test fixes the email domain (Stage 3 step 1) |
+| UQ-12 | Employee-ID login and the feasibility test | Mapping design approved. **Decision: you run the one-account test locally with my guidance**; keys stay on your machine, never in chat | **Test passed (1 Nov 2026): email domain `mtc-erp-demo.invalid`**; details in `stage2.1-employee-login-design.md` §8.3 |
 | UQ-30 | Version control | **Decision: you set it up yourself** (no new repository or overwrite authorised for me) | I continue only after you confirm it is done |
 | UQ-13 | Depot codes | **Keep the proposed codes, labelled MOCK, configurable, separate from names**; all 33 retained | official codes whenever available; hubs UQ-46 |
 | UQ-14 | Withdraw pending master change | **HO withdraws own pending change with mandatory remarks; administrator override; never after approval/rejection** | draft discard UQ-49 |

@@ -15,3 +15,4 @@ supabase/.temp/
 # kept out of the repository (contents not reviewed / may hold real data)
 MTC_Tyre_Master.xlsx
 *.zip
+*.local.json
