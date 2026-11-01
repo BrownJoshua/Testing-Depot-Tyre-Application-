@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+:root {
+  --mtc-navy: #0f3a5f;
+  --mtc-blue: #1d70f5;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f3f6fa;
+  color: #10243e;
+  -webkit-text-size-adjust: 100%;
+}
+button, input { font: inherit; }
+/* large, easy touch targets on phones */
+@media (pointer: coarse) {
+  button, a, input { min-height: 44px; }
+}

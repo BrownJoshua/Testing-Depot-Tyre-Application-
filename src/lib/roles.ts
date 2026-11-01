@@ -1,0 +1,67 @@
+import type { RoleCode } from './types';
+
+export interface RoleInfo {
+  label: string;
+  home: string;
+  scope: string;
+  interface: string;
+}
+
+export const ROLE_INFO: Record<RoleCode, RoleInfo> = {
+  HO:  { label: 'HO (Tech)',  home: '/ho',  scope: 'All 33 depots (read); master-data maker', interface: 'Desktop' },
+  AM:  { label: 'AM (Tech)',  home: '/am',  scope: 'All depots (read); approves all HO master changes', interface: 'Desktop' },
+  SUP: { label: 'Supervisor', home: '/sup', scope: 'Own depot; operational approver and monitor', interface: 'Desktop' },
+  TIC: { label: 'Tyre IC',    home: '/tic', scope: 'Own depot; depot operations', interface: 'Desktop and mobile' },
+  TM:  { label: 'Tyre Man',   home: '/tm',  scope: 'Own assigned jobs only', interface: 'Mobile only' },
+};
+
+export interface NavItem {
+  label: string;
+  /** the stage in which this screen is built - everything below is a labelled placeholder today */
+  arrives: string;
+}
+
+export const NAV: Record<RoleCode, NavItem[]> = {
+  HO: [
+    { label: 'Dashboard', arrives: 'Stage 7' },
+    { label: 'Master data', arrives: 'Stage 4' },
+    { label: 'My change requests', arrives: 'Stage 4' },
+    { label: 'Purchase Indent', arrives: 'Stage 4' },
+    { label: 'Allocation Requests', arrives: 'Stage 4' },
+    { label: 'Maintenance Pending', arrives: 'Stage 4' },
+    { label: 'Reports', arrives: 'Stage 7' },
+  ],
+  AM: [
+    { label: 'Master change approvals', arrives: 'Stage 4' },
+    { label: 'Operational approvals', arrives: 'Stage 4' },
+    { label: 'Approval history', arrives: 'Stage 4' },
+    { label: 'Master registers (read)', arrives: 'Stage 4' },
+    { label: 'Dashboard', arrives: 'Stage 7' },
+  ],
+  SUP: [
+    { label: 'Approval queue', arrives: 'Stage 4 / 5b' },
+    { label: 'Job Card Register (monitor)', arrives: 'Stage 5a' },
+    { label: 'Log Sheet Complaints', arrives: 'Stage 5a' },
+    { label: 'Fleet Register', arrives: 'Stage 5a' },
+    { label: 'Tyre Register', arrives: 'Stage 5b' },
+  ],
+  TIC: [
+    { label: 'Dashboard', arrives: 'Stage 5a' },
+    { label: 'Job Card Register', arrives: 'Stage 5a' },
+    { label: 'Complaints', arrives: 'Stage 5a' },
+    { label: 'Schedule Planner', arrives: 'Stage 5a' },
+    { label: 'Fleet Grouping', arrives: 'Stage 5a' },
+    { label: 'Duty Posting', arrives: 'Stage 5a' },
+    { label: 'Depot Indent / GIN / GRN', arrives: 'Stage 5b' },
+    { label: 'WSR and Gate Pass', arrives: 'Stage 5b' },
+    { label: 'Live Tyre Stock and Register', arrives: 'Stage 5b' },
+  ],
+  TM: [
+    { label: 'My Jobs', arrives: 'Stage 6' },
+    { label: 'Duty & Shift', arrives: 'Stage 6' },
+    { label: 'My WSR', arrives: 'Stage 6' },
+    { label: 'GRN', arrives: 'Stage 6' },
+    { label: 'MRN', arrives: 'Stage 6' },
+    { label: 'SRN', arrives: 'Stage 6' },
+  ],
+};
