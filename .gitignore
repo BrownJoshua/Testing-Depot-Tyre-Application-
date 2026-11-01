@@ -1,0 +1,17 @@
+﻿# secrets and local configuration
+.env
+.env.*
+!.env.example
+.env.admin.local
+*.local
+
+# dependencies and build output
+node_modules/
+dist/
+.netlify/
+supabase/.temp/
+*.log
+
+# kept out of the repository (contents not reviewed / may hold real data)
+MTC_Tyre_Master.xlsx
+*.zip
