@@ -27,6 +27,10 @@ export const NAV: Record<RoleCode, NavItem[]> = {
   HO: [
     { label: 'Dashboard', arrives: 'Stage 7' },
     { label: 'Vendor Master', arrives: 'Stage 4', path: '/ho/vendors' },
+    { label: 'Tyre Folio', arrives: 'Stage 4', path: '/ho/m/tyre-folio' },
+    { label: 'Tyre sizes', arrives: 'Stage 4', path: '/ho/m/tyre-sizes' },
+    { label: 'Tyre makes', arrives: 'Stage 4', path: '/ho/m/tyre-makes' },
+    { label: 'Tyre models', arrives: 'Stage 4', path: '/ho/m/tyre-models' },
     { label: 'Other master data', arrives: 'Stage 4' },
     { label: 'My change requests', arrives: 'Stage 4', path: '/ho/requests' },
     { label: 'Purchase Indent', arrives: 'Stage 4' },
@@ -39,6 +43,10 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Operational approvals', arrives: 'Stage 4' },
     { label: 'Approval history', arrives: 'Stage 4', path: '/am/history' },
     { label: 'Vendor Master (read)', arrives: 'Stage 4', path: '/am/vendors' },
+    { label: 'Tyre Folio (read)', arrives: 'Stage 4', path: '/am/m/tyre-folio' },
+    { label: 'Tyre sizes (read)', arrives: 'Stage 4', path: '/am/m/tyre-sizes' },
+    { label: 'Tyre makes (read)', arrives: 'Stage 4', path: '/am/m/tyre-makes' },
+    { label: 'Tyre models (read)', arrives: 'Stage 4', path: '/am/m/tyre-models' },
     { label: 'Dashboard', arrives: 'Stage 7' },
   ],
   SUP: [

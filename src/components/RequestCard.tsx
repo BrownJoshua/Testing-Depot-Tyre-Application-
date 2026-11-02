@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cardCls, StatusBadge } from './ui';
 import { fmtDateTime, listHistory, type ChangeRequest, type HistoryRow, type RefValue, type Vendor } from '../lib/masters';
+import { describeRequest, type Ctx } from '../lib/entities';
 
 const FIELD_LABEL: Record<string, string> = {
   vendor_code: 'Vendor code', vendor_name: 'Name', category_code: 'Category', contact_person: 'Contact person',
@@ -20,9 +21,12 @@ function show(v: unknown): string {
 }
 
 export function RequestCard(props: {
-  request: ChangeRequest; vendors: Vendor[]; categories: RefValue[]; actions?: ReactNode; startOpen?: boolean;
+  request: ChangeRequest; ctx: Ctx; actions?: ReactNode; startOpen?: boolean;
 }) {
-  const { request: r, vendors, categories } = props;
+  const { request: r, ctx } = props;
+  const vendors: Vendor[] = ctx.vendors;
+  const categories: RefValue[] = ctx.refs.filter((x) => x.list_code === 'vendor_category');
+  const generic = describeRequest(r, ctx);
   const [open, setOpen] = useState(!!props.startOpen);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
   useEffect(() => {
@@ -35,7 +39,7 @@ export function RequestCard(props: {
   const catLabel = (code: unknown) => categories.find((c) => c.code === code)?.label ?? String(code ?? '—');
   const isCreate = r.action === 'CREATE';
   const keys = Object.keys(r.proposed_payload);
-  const title = vendor?.vendor_name ?? String(r.proposed_payload.vendor_name ?? 'New vendor');
+  const title = generic ? generic.title : `${ACTION_LABEL[r.action] ?? r.action}: ${vendor?.vendor_name ?? String(r.proposed_payload.vendor_name ?? 'New vendor')}`;
 
   return (
     <div className={cardCls}>
@@ -43,7 +47,7 @@ export function RequestCard(props: {
         <span className="mt-1 text-slate-400">{open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-900">{ACTION_LABEL[r.action] ?? r.action}: {title}</span>
+            <span className="font-semibold text-slate-900">{title}</span>
             <StatusBadge status={r.status} />
           </span>
           <span className="mt-1 block text-xs text-slate-500">
@@ -64,7 +68,13 @@ export function RequestCard(props: {
                   </tr>
                 </thead>
                 <tbody>
-                  {keys.map((k) => {
+                  {generic ? generic.rows.map((g) => (
+                    <tr key={g.label} className="border-t border-slate-100 align-top">
+                      <td className="py-1.5 pr-4 text-slate-500">{g.label}</td>
+                      {!isCreate && <td className="py-1.5 pr-4 text-slate-600">{g.now}</td>}
+                      <td className="py-1.5 font-medium text-slate-900">{g.proposed}</td>
+                    </tr>
+                  )) : keys.map((k) => {
                     const proposed = r.proposed_payload[k];
                     return (
                       <tr key={k} className="border-t border-slate-100 align-top">

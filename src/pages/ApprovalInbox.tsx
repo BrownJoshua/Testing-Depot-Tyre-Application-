@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  approveRequest, listCategories, listRequests, listVendors, rejectRequest, friendlyError,
-  type ChangeRequest, type RefValue, type Vendor,
-} from '../lib/masters';
+import { approveRequest, listRequests, rejectRequest, friendlyError, type ChangeRequest } from '../lib/masters';
+import { loadCtx, type Ctx } from '../lib/entities';
 import { RequestCard } from '../components/RequestCard';
 import { Banner, btnDanger, btnPrimary, PageHeader, ReasonDialog } from '../components/ui';
 
@@ -11,8 +9,7 @@ type Pending = { request: ChangeRequest; kind: 'approve' | 'reject' };
 /** AM: pending master-data changes (mode "pending") or decided ones (mode "history"). */
 export function ApprovalInbox({ mode }: { mode: 'pending' | 'history' }) {
   const [reqs, setReqs] = useState<ChangeRequest[] | null>(null);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [cats, setCats] = useState<RefValue[]>([]);
+  const [ctx, setCtx] = useState<Ctx | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [act, setAct] = useState<Pending | null>(null);
@@ -21,8 +18,8 @@ export function ApprovalInbox({ mode }: { mode: 'pending' | 'history' }) {
 
   const load = useCallback(() => {
     const statuses = mode === 'pending' ? (['PENDING_APPROVAL'] as const) : (['APPROVED', 'REJECTED', 'WITHDRAWN'] as const);
-    Promise.all([listRequests([...statuses]), listVendors(), listCategories()])
-      .then(([r, v, c]) => { setReqs(r); setVendors(v); setCats(c); })
+    Promise.all([listRequests([...statuses]), loadCtx()])
+      .then(([r, c]) => { setReqs(r); setCtx(c); })
       .catch((e: Error) => setError(friendlyError(e.message)));
   }, [mode]);
   useEffect(() => { setReqs(null); load(); }, [load]);
@@ -50,8 +47,8 @@ export function ApprovalInbox({ mode }: { mode: 'pending' | 'history' }) {
       {reqs === null && !error && <p className="text-slate-500">Loading…</p>}
       {reqs?.length === 0 && <Banner kind="info">{mode === 'pending' ? 'Nothing is waiting for your approval.' : 'No decided requests yet.'}</Banner>}
       <div className="space-y-3">
-        {reqs?.map((r) => (
-          <RequestCard key={r.id} request={r} vendors={vendors} categories={cats} startOpen={mode === 'pending'}
+        {ctx && reqs?.map((r) => (
+          <RequestCard key={r.id} request={r} ctx={ctx} startOpen={mode === 'pending'}
             actions={mode === 'pending' && <>
               <button className={btnDanger} onClick={() => { setDialogError(null); setAct({ request: r, kind: 'reject' }); }}>Reject</button>
               <button className={btnPrimary} onClick={() => { setDialogError(null); setAct({ request: r, kind: 'approve' }); }}>Approve</button>

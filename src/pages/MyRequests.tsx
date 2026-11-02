@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  listCategories, listRequests, listVendors, submitRequest, withdrawRequest, friendlyError,
-  type ChangeRequest, type RefValue, type Vendor,
-} from '../lib/masters';
+import { listRequests, submitRequest, withdrawRequest, friendlyError, type ChangeRequest } from '../lib/masters';
+import { entityByType, loadCtx, type Ctx } from '../lib/entities';
+
+/** where a draft is edited: the vendor form, or the generic master form */
+const draftPath = (r: ChangeRequest) => {
+  const def = entityByType(r.entity_type);
+  return def ? `/ho/m/${def.slug}/new?draft=${r.id}` : `/ho/vendors/new?draft=${r.id}`;
+};
 import { RequestCard } from '../components/RequestCard';
 import { Banner, btnPlain, btnPrimary, PageHeader, ReasonDialog } from '../components/ui';
 
@@ -11,8 +15,7 @@ import { Banner, btnPlain, btnPrimary, PageHeader, ReasonDialog } from '../compo
 export function MyRequests() {
   const location = useLocation();
   const [reqs, setReqs] = useState<ChangeRequest[] | null>(null);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [cats, setCats] = useState<RefValue[]>([]);
+  const [ctx, setCtx] = useState<Ctx | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
   const [withdraw, setWithdraw] = useState<ChangeRequest | null>(null);
@@ -20,8 +23,8 @@ export function MyRequests() {
   const [dialogError, setDialogError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    Promise.all([listRequests(), listVendors(), listCategories()])
-      .then(([r, v, c]) => { setReqs(r); setVendors(v); setCats(c); })
+    Promise.all([listRequests(), loadCtx()])
+      .then(([r, c]) => { setReqs(r); setCtx(c); })
       .catch((e: Error) => setError(friendlyError(e.message)));
   }, []);
   useEffect(load, [load]);
@@ -47,10 +50,10 @@ export function MyRequests() {
       {reqs === null && !error && <p className="text-slate-500">Loading…</p>}
       {reqs?.length === 0 && <Banner kind="info">No requests yet. Start from <Link className="underline" to="/ho/vendors">Vendor Master</Link>.</Banner>}
       <div className="space-y-3">
-        {reqs?.map((r) => (
-          <RequestCard key={r.id} request={r} vendors={vendors} categories={cats}
+        {ctx && reqs?.map((r) => (
+          <RequestCard key={r.id} request={r} ctx={ctx}
             actions={<>
-              {r.status === 'DRAFT' && <Link className={btnPlain} to={`/ho/vendors/new?draft=${r.id}`}>Edit draft</Link>}
+              {r.status === 'DRAFT' && <Link className={btnPlain} to={draftPath(r)}>Edit draft</Link>}
               {r.status === 'DRAFT' && <button className={btnPrimary} onClick={() => void submit(r)}>Send for approval</button>}
               {r.status === 'PENDING_APPROVAL' && <button className={btnPlain} onClick={() => { setDialogError(null); setWithdraw(r); }}>Withdraw</button>}
             </>} />

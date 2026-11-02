@@ -8,6 +8,8 @@ import { ApprovalInbox } from './pages/ApprovalInbox';
 import { MyRequests } from './pages/MyRequests';
 import { VendorForm } from './pages/VendorForm';
 import { VendorList } from './pages/VendorList';
+import { MasterForm } from './pages/MasterForm';
+import { MasterList } from './pages/MasterList';
 
 export default function App() {
   return (
@@ -22,6 +24,9 @@ export default function App() {
           <Route path="vendors/new" element={<VendorForm />} />
           <Route path="vendors/:id/edit" element={<VendorForm />} />
           <Route path="requests" element={<MyRequests />} />
+          <Route path="m/:slug" element={<MasterList />} />
+          <Route path="m/:slug/new" element={<MasterForm />} />
+          <Route path="m/:slug/:id/edit" element={<MasterForm />} />
           <Route path="*" element={<RoleHome />} />
         </Routes>
       </AppShell></ProtectedRoute>} />
@@ -31,6 +36,7 @@ export default function App() {
           <Route path="approvals" element={<ApprovalInbox mode="pending" />} />
           <Route path="history" element={<ApprovalInbox mode="history" />} />
           <Route path="vendors" element={<VendorList />} />
+          <Route path="m/:slug" element={<MasterList />} />
           <Route path="*" element={<RoleHome />} />
         </Routes>
       </AppShell></ProtectedRoute>} />
