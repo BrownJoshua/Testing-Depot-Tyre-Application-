@@ -11,6 +11,7 @@ export interface Ctx {
   sizes: Row[]; makes: Row[]; models: Row[]; folios: Row[];
   folioLocs: Record<string, string[]>;
   fleetTypes: Row[]; fleetTypeSizes: Record<string, string[]>; fleets: Row[]; depots: Row[]; jobs: Row[];
+  complaintTypes: Row[]; complaintJobs: Record<string, string[]>;
 }
 
 async function all(table: string, order: string): Promise<Row[]> {
@@ -20,18 +21,20 @@ async function all(table: string, order: string): Promise<Row[]> {
 }
 
 export async function loadCtx(): Promise<Ctx> {
-  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs] = await Promise.all([
+  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs] = await Promise.all([
     all('vendors', 'vendor_code'), all('ref_values', 'sort_order'), all('tyre_sizes', 'size_code'), all('tyre_makes', 'name'),
     all('tyre_models', 'model_name'), all('tyre_folios', 'folio_no'), all('tyre_folio_locations', 'location_type'),
     all('fleet_types', 'fleet_make'), all('fleet_type_tyre_sizes', 'tyre_size_id'), all('fleets', 'fleet_no'),
-    all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'),
+    all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'), all('complaint_types', 'complaint_code'), all('complaint_type_jobs', 'job_id'),
   ]);
+  const complaintJobs: Record<string, string[]> = {};
+  for (const l of ctJobs) (complaintJobs[l.complaint_type_id] ??= []).push(jobs.find((j) => j.id === l.job_id)?.job_code ?? '');
   const folioLocs: Record<string, string[]> = {};
   for (const l of locs) (folioLocs[l.folio_id] ??= []).push(l.location_type);
   const fleetTypeSizes: Record<string, string[]> = {};
   for (const l of ftSizes) (fleetTypeSizes[l.fleet_type_id] ??= []).push(sizes.find((x) => x.id === l.tyre_size_id)?.size_code ?? '');
   const depots = orgs.filter((o) => o.unit_type === 'DEPOT');
-  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs };
+  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs };
 }
 
 export interface Option { value: string; label: string }
@@ -227,6 +230,22 @@ export const ENTITIES: EntityDef[] = [
       { label: 'Fleet type', value: (r, c) => typeName(c, r.fleet_type_id) ?? 'All' },
     ],
     nameOf: (f) => `${f.job_code ?? ''} ${f.job_name ?? ''}`.trim() || 'job',
+  },
+  {
+    type: 'complaint_type', slug: 'complaint-types', title: 'Complaint Master', singular: 'complaint type',
+    hint: 'The twelve types come from the prototype log-sheet form; their codes are placeholders. “Required jobs” are the jobs a complaint of this type needs.',
+    fields: [
+      { key: 'complaint_code', label: 'Complaint code', kind: 'text', createOnly: true, required: true, hint: 'e.g. CT-013' },
+      { key: 'complaint_name', label: 'Complaint name', kind: 'text', required: true, wide: true },
+      { key: 'required_jobs', label: 'Required jobs', kind: 'multi', wide: true, options: (c) => c.jobs.filter((j) => j.status === 'ACTIVE').map((j) => ({ value: j.job_code, label: `${j.job_code} — ${j.job_name}` })) },
+    ],
+    rows: (c) => c.complaintTypes,
+    toForm: (r, c) => ({ complaint_code: r.complaint_code, complaint_name: r.complaint_name, required_jobs: [...(c.complaintJobs[r.id] ?? [])].sort() }),
+    columns: [
+      { label: 'Code', value: (r) => r.complaint_code }, { label: 'Complaint', value: (r) => r.complaint_name },
+      { label: 'Required jobs', value: (r, c) => (c.complaintJobs[r.id] ?? []).join(', ') || '—' },
+    ],
+    nameOf: (f) => `${f.complaint_code ?? ''} ${f.complaint_name ?? ''}`.trim() || 'complaint type',
   },
 ];
 

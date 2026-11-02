@@ -8,6 +8,9 @@ import { ApprovalInbox } from './pages/ApprovalInbox';
 import { MyRequests } from './pages/MyRequests';
 import { VendorForm } from './pages/VendorForm';
 import { VendorList } from './pages/VendorList';
+import { Complaints } from './pages/Complaints';
+import { JobCardDetail } from './pages/JobCardDetail';
+import { JobCards } from './pages/JobCards';
 import { MasterForm } from './pages/MasterForm';
 import { MasterList } from './pages/MasterList';
 
@@ -43,6 +46,9 @@ export default function App() {
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
           <Route index element={<RoleHome />} />
+          <Route path="job-cards" element={<JobCards />} />
+          <Route path="job-cards/:id" element={<JobCardDetail />} />
+          <Route path="complaints" element={<Complaints />} />
           <Route path="m/:slug" element={<MasterList />} />
           <Route path="*" element={<RoleHome />} />
         </Routes>
@@ -52,6 +58,9 @@ export default function App() {
       <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
         <Routes>
           <Route index element={<RoleHome />} />
+          <Route path="job-cards" element={<JobCards />} />
+          <Route path="job-cards/:id" element={<JobCardDetail />} />
+          <Route path="complaints" element={<Complaints />} />
           <Route path="m/:slug" element={<MasterList />} />
           <Route path="*" element={<RoleHome />} />
         </Routes>

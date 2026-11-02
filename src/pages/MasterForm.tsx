@@ -132,7 +132,7 @@ export function MasterForm() {
                     ) : (
                       <input className={inputCls} disabled={locked} type={fd.kind === 'number' ? 'number' : fd.kind === 'date' ? 'date' : 'text'} step="any"
                         value={(f[fd.key] as string | number | null) ?? ''}
-                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') && fd.key !== 'chassis_no' || fd.key === 'size_code' || fd.key === 'job_code' ? e.target.value.toUpperCase() : e.target.value)} />
+                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') && fd.key !== 'chassis_no' || fd.key === 'size_code' || fd.key === 'job_code' || fd.key === 'complaint_code' ? e.target.value.toUpperCase() : e.target.value)} />
                     )}
                   </Field>
                 </div>
