@@ -10,6 +10,7 @@ export interface Ctx {
   refs: (RefValue & { list_code: string })[];
   sizes: Row[]; makes: Row[]; models: Row[]; folios: Row[];
   folioLocs: Record<string, string[]>;
+  fleetTypes: Row[]; fleetTypeSizes: Record<string, string[]>; fleets: Row[]; depots: Row[]; jobs: Row[];
 }
 
 async function all(table: string, order: string): Promise<Row[]> {
@@ -19,18 +20,23 @@ async function all(table: string, order: string): Promise<Row[]> {
 }
 
 export async function loadCtx(): Promise<Ctx> {
-  const [vendors, refs, sizes, makes, models, folios, locs] = await Promise.all([
+  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs] = await Promise.all([
     all('vendors', 'vendor_code'), all('ref_values', 'sort_order'), all('tyre_sizes', 'size_code'), all('tyre_makes', 'name'),
     all('tyre_models', 'model_name'), all('tyre_folios', 'folio_no'), all('tyre_folio_locations', 'location_type'),
+    all('fleet_types', 'fleet_make'), all('fleet_type_tyre_sizes', 'tyre_size_id'), all('fleets', 'fleet_no'),
+    all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'),
   ]);
   const folioLocs: Record<string, string[]> = {};
   for (const l of locs) (folioLocs[l.folio_id] ??= []).push(l.location_type);
-  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs };
+  const fleetTypeSizes: Record<string, string[]> = {};
+  for (const l of ftSizes) (fleetTypeSizes[l.fleet_type_id] ??= []).push(sizes.find((x) => x.id === l.tyre_size_id)?.size_code ?? '');
+  const depots = orgs.filter((o) => o.unit_type === 'DEPOT');
+  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs };
 }
 
 export interface Option { value: string; label: string }
 export interface FieldDef {
-  key: string; label: string; kind: 'text' | 'number' | 'bool' | 'select' | 'multi';
+  key: string; label: string; kind: 'text' | 'number' | 'date' | 'bool' | 'select' | 'multi';
   /** only chosen when the record is created */
   createOnly?: boolean; required?: boolean; hint?: string; wide?: boolean;
   options?: (ctx: Ctx, form: Row) => Option[];
@@ -54,6 +60,19 @@ const LOCATIONS: Option[] = [
   { value: 'CENTRAL_STORE', label: 'Central Store' }, { value: 'MIC_VEHICLE_UNIT', label: 'MIC Vehicle Unit' },
   { value: 'DEPOT', label: 'Depot' }, { value: 'TRS', label: 'TRS' },
 ];
+
+const POSITIONS: Option[] = ['FR', 'FL', 'RRI', 'RRO', 'RLI', 'RLO'].map((p) => ({ value: p, label: p }));
+const DEFAULT_POSITIONS = 'FR,FL,RRI,RRO,RLI,RLO';
+const WORK_CATEGORIES: Option[] = [
+  ['AIR_INFLATION', 'Air Inflation'], ['AIR_INFLATION_NITROGEN', 'Air Inflation - Nitrogen'], ['INSPECTION', 'Inspection'],
+  ['TYRE_ROTATION', 'Tyre Rotation'], ['TYRE_DISCOUT', 'Tyre Discout'], ['CENSUS', 'Census'], ['TYRE_CHANGING', 'Tyre Changing'],
+  ['TYRE_REMOVAL', 'Tyre Removal'], ['TYRE_FITMENT', 'Tyre Fitment'], ['TYRE_SETTING', 'Tyre Setting'], ['TYRE_UNSETTING', 'Tyre Unsetting'],
+].map(([value, label]) => ({ value, label }));
+const sizeOpts = (c: Ctx): Option[] => c.sizes.filter((s) => s.status === 'ACTIVE').map((s) => ({ value: s.size_code, label: s.size_code }));
+const depotOpts = (c: Ctx): Option[] => c.depots.filter((d) => d.status === 'ACTIVE').map((d) => ({ value: d.code, label: d.name }));
+const fleetMakeOpts = (c: Ctx): Option[] => [...new Set(c.fleetTypes.filter((t) => t.status === 'ACTIVE').map((t) => t.fleet_make as string))].map((m) => ({ value: m, label: m }));
+const fleetModelOpts = (c: Ctx, f: Row): Option[] => c.fleetTypes.filter((t) => t.status === 'ACTIVE' && t.fleet_make === f.fleet_make).map((t) => ({ value: t.fleet_model, label: t.fleet_model }));
+const typeName = (c: Ctx, id: string | null) => { const t = c.fleetTypes.find((x) => x.id === id); return t ? `${t.fleet_make} ${t.fleet_model}` : null; };
 
 export const ENTITIES: EntityDef[] = [
   {
@@ -131,6 +150,84 @@ export const ENTITIES: EntityDef[] = [
     ],
     nameOf: (f) => `${f.folio_no ?? ''} ${f.folio_name ?? ''}`.trim() || 'folio',
   },
+  {
+    type: 'fleet_type', slug: 'fleet-types', title: 'Fleet Type Master', singular: 'fleet type',
+    hint: 'Make and model cannot be changed after creation. The tyre sizes chosen here are the sizes that fit this type.',
+    fields: [
+      { key: 'fleet_make', label: 'Fleet make', kind: 'text', createOnly: true, required: true },
+      { key: 'fleet_model', label: 'Fleet model', kind: 'text', createOnly: true, required: true },
+      { key: 'tyre_sizes', label: 'Tyre sizes that fit', kind: 'multi', wide: true, options: sizeOpts },
+    ],
+    rows: (c) => c.fleetTypes,
+    toForm: (r, c) => ({ fleet_make: r.fleet_make, fleet_model: r.fleet_model, tyre_sizes: [...(c.fleetTypeSizes[r.id] ?? [])].sort() }),
+    columns: [
+      { label: 'Make', value: (r) => r.fleet_make }, { label: 'Model', value: (r) => r.fleet_model },
+      { label: 'Tyre sizes', value: (r, c) => (c.fleetTypeSizes[r.id] ?? []).join(', ') || '—' },
+    ],
+    nameOf: (f) => `${f.fleet_make ?? ''} ${f.fleet_model ?? ''}`.trim() || 'fleet type',
+  },
+  {
+    type: 'fleet', slug: 'fleets', title: 'Fleet Register', singular: 'fleet',
+    hint: 'You see the fleets of your own depot. Moving a fleet to another depot is recorded in its depot history.',
+    fields: [
+      { key: 'fleet_no', label: 'Fleet No.', kind: 'text', createOnly: true, required: true, hint: '3–12 characters: A–Z, 0–9, hyphen (placeholder rule)' },
+      { key: 'registration_no', label: 'Registration No.', kind: 'text', required: true },
+      { key: 'chassis_no', label: 'Chassis No.', kind: 'text' },
+      { key: 'purchase_date', label: 'Purchase date', kind: 'date' },
+      { key: 'depot_code', label: 'Home depot', kind: 'select', required: true, options: depotOpts },
+      { key: 'fleet_make', label: 'Fleet make', kind: 'select', required: true, options: fleetMakeOpts },
+      { key: 'fleet_model', label: 'Fleet model', kind: 'select', required: true, options: fleetModelOpts },
+      { key: 'bus_model_type_code', label: 'Bus model type', kind: 'select', options: refOpts('bus_model_type') },
+      { key: 'vehicle_type_code', label: 'Vehicle type', kind: 'select', options: refOpts('vehicle_type') },
+      { key: 'oem_size_code', label: 'OEM tyre size', kind: 'select', options: sizeOpts },
+      { key: 'positions', label: 'Tyre positions (leave empty for FR FL RRI RRO RLI RLO)', kind: 'multi', wide: true, options: () => POSITIONS },
+    ],
+    companions: { fleet_make: ['fleet_model'], fleet_model: ['fleet_make'] },
+    rows: (c) => c.fleets,
+    toForm: (r, c) => ({
+      fleet_no: r.fleet_no, registration_no: r.registration_no, chassis_no: r.chassis_no, purchase_date: r.purchase_date,
+      depot_code: c.depots.find((d) => d.id === r.org_unit_id)?.code ?? null,
+      fleet_make: c.fleetTypes.find((t) => t.id === r.fleet_type_id)?.fleet_make ?? null,
+      fleet_model: c.fleetTypes.find((t) => t.id === r.fleet_type_id)?.fleet_model ?? null,
+      bus_model_type_code: refCode(c, r.bus_model_type_ref), vehicle_type_code: refCode(c, r.vehicle_type_ref),
+      oem_size_code: c.sizes.find((s) => s.id === r.oem_tyre_size_id)?.size_code ?? null,
+      positions: (r.position_layout ?? []).join(',') === DEFAULT_POSITIONS ? [] : [...(r.position_layout ?? [])],
+    }),
+    columns: [
+      { label: 'Fleet', value: (r) => r.fleet_no }, { label: 'Registration', value: (r) => r.registration_no },
+      { label: 'Depot', value: (r, c) => c.depots.find((d) => d.id === r.org_unit_id)?.name ?? '—' },
+      { label: 'Type', value: (r, c) => typeName(c, r.fleet_type_id) ?? '—' },
+      { label: 'Vehicle', value: (r, c) => refLabel(c, r.vehicle_type_ref) },
+    ],
+    nameOf: (f) => `${f.fleet_no ?? ''} ${f.registration_no ?? ''}`.trim() || 'fleet',
+  },
+  {
+    type: 'maintenance_job', slug: 'maintenance-jobs', title: 'Maintenance Configuration: jobs', singular: 'job',
+    hint: 'JOB-007 is reserved and cannot be used. Leave the fleet type empty for a job that applies to every fleet type.',
+    fields: [
+      { key: 'job_code', label: 'Job code', kind: 'text', createOnly: true, required: true, hint: 'e.g. JOB-013' },
+      { key: 'job_name', label: 'Job name', kind: 'text', required: true },
+      { key: 'work_category', label: 'Work category', kind: 'select', required: true, options: () => WORK_CATEGORIES },
+      { key: 'est_minutes_per_fleet', label: 'Minutes per fleet', kind: 'number' },
+      { key: 'est_minutes_per_tyre', label: 'Minutes per tyre', kind: 'number' },
+      { key: 'fleet_make', label: 'Only for fleet make', kind: 'select', options: fleetMakeOpts },
+      { key: 'fleet_model', label: 'Only for fleet model', kind: 'select', options: fleetModelOpts },
+    ],
+    companions: { fleet_make: ['fleet_model'], fleet_model: ['fleet_make'] },
+    rows: (c) => c.jobs,
+    toForm: (r, c) => ({
+      job_code: r.job_code, job_name: r.job_name, work_category: r.work_category,
+      est_minutes_per_fleet: r.est_minutes_per_fleet, est_minutes_per_tyre: r.est_minutes_per_tyre,
+      fleet_make: c.fleetTypes.find((t) => t.id === r.fleet_type_id)?.fleet_make ?? null,
+      fleet_model: c.fleetTypes.find((t) => t.id === r.fleet_type_id)?.fleet_model ?? null,
+    }),
+    columns: [
+      { label: 'Code', value: (r) => r.job_code }, { label: 'Job', value: (r) => r.job_name },
+      { label: 'Category', value: (r) => WORK_CATEGORIES.find((w) => w.value === r.work_category)?.label ?? r.work_category },
+      { label: 'Fleet type', value: (r, c) => typeName(c, r.fleet_type_id) ?? 'All' },
+    ],
+    nameOf: (f) => `${f.job_code ?? ''} ${f.job_name ?? ''}`.trim() || 'job',
+  },
 ];
 
 export const entityBySlug = (slug: string | undefined) => ENTITIES.find((e) => e.slug === slug);
@@ -142,7 +239,8 @@ export function showValue(def: FieldDef | undefined, v: unknown, ctx: Ctx): stri
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (Array.isArray(v)) {
     if (v.length === 0) return 'none';
-    return v.map((x) => (typeof x === 'object' ? `${(x as Row).contact_name}${(x as Row).is_primary ? ' (primary)' : ''}` : LOCATIONS.find((l) => l.value === x)?.label ?? String(x))).join(', ');
+    const opts = def?.kind === 'multi' && def.options ? def.options(ctx, {}) : LOCATIONS;
+    return v.map((x) => (typeof x === 'object' ? `${(x as Row).contact_name}${(x as Row).is_primary ? ' (primary)' : ''}` : opts.find((l) => l.value === x)?.label ?? String(x))).join(', ');
   }
   if (def?.kind === 'select' && def.options) return def.options(ctx, {}).find((o) => o.value === v)?.label ?? String(v);
   return String(v);

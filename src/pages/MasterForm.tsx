@@ -4,7 +4,9 @@ import { createRequest, friendlyError, listRequests, submitRequest, updateReques
 import { entityBySlug, loadCtx, type Ctx, type FieldDef, type Row } from '../lib/entities';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader } from '../components/ui';
 
-const sameValue = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+/** choosing a new value for the key clears the field that depends on it */
+const DEPENDENT: Record<string, string> = { make_name: 'model_name', fleet_make: 'fleet_model' };
+const sameValue =(a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /** Generic propose form driven by the entity definition (/ho/m/:slug/new, /ho/m/:slug/:id/edit, ?draft=<request id>). */
 export function MasterForm() {
@@ -107,7 +109,11 @@ export function MasterForm() {
                     {fd.options!(ctx, f).map((o) => (
                       <label key={o.value} className="flex items-center gap-1.5 text-sm">
                         <input type="checkbox" checked={(f[fd.key] as string[]).includes(o.value)}
-                          onChange={(e) => set(fd.key, e.target.checked ? [...(f[fd.key] as string[]), o.value].sort() : (f[fd.key] as string[]).filter((x) => x !== o.value))} />
+                          onChange={(e) => {
+                            const chosen = new Set(f[fd.key] as string[]);
+                            if (e.target.checked) chosen.add(o.value); else chosen.delete(o.value);
+                            set(fd.key, fd.options!(ctx, f).map((x) => x.value).filter((v) => chosen.has(v)));
+                          }} />
                         {o.label}
                       </label>
                     ))}
@@ -119,14 +125,14 @@ export function MasterForm() {
                   <Field label={fd.label} hint={locked ? 'Cannot be changed after creation.' : fd.hint}>
                     {fd.kind === 'select' ? (
                       <select className={inputCls} disabled={locked} value={(f[fd.key] as string) ?? ''}
-                        onChange={(e) => { set(fd.key, e.target.value); if (fd.key === 'make_name' && e.target.value !== f.make_name) set('model_name', ''); }}>
+                        onChange={(e) => { set(fd.key, e.target.value); const dep = DEPENDENT[fd.key]; if (dep && e.target.value !== f[fd.key]) set(dep, ''); }}>
                         <option value="">{fd.required ? 'Select…' : '— none —'}</option>
                         {fd.options!(ctx, f).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     ) : (
-                      <input className={inputCls} disabled={locked} type={fd.kind === 'number' ? 'number' : 'text'} step="any"
+                      <input className={inputCls} disabled={locked} type={fd.kind === 'number' ? 'number' : fd.kind === 'date' ? 'date' : 'text'} step="any"
                         value={(f[fd.key] as string | number | null) ?? ''}
-                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') || fd.key === 'size_code' ? e.target.value.toUpperCase() : e.target.value)} />
+                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') && fd.key !== 'chassis_no' || fd.key === 'size_code' || fd.key === 'job_code' ? e.target.value.toUpperCase() : e.target.value)} />
                     )}
                   </Field>
                 </div>

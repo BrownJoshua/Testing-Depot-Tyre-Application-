@@ -40,10 +40,22 @@ export default function App() {
           <Route path="*" element={<RoleHome />} />
         </Routes>
       </AppShell></ProtectedRoute>} />
-      <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell><RoleHome /></AppShell></ProtectedRoute>} />
+      <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
+        <Routes>
+          <Route index element={<RoleHome />} />
+          <Route path="m/:slug" element={<MasterList />} />
+          <Route path="*" element={<RoleHome />} />
+        </Routes>
+      </AppShell></ProtectedRoute>} />
 
       {/* Tyre IC: one responsive layout for desktop, tablet and phone */}
-      <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell><RoleHome /></AppShell></ProtectedRoute>} />
+      <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
+        <Routes>
+          <Route index element={<RoleHome />} />
+          <Route path="m/:slug" element={<MasterList />} />
+          <Route path="*" element={<RoleHome />} />
+        </Routes>
+      </AppShell></ProtectedRoute>} />
 
       {/* Tyre Man: mobile-only */}
       <Route path="/tm/*"  element={<ProtectedRoute allow="TM"><MobileShell><RoleHome /></MobileShell></ProtectedRoute>} />

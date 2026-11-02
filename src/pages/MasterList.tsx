@@ -30,8 +30,7 @@ export function MasterList() {
   }, [def, ctx, q]);
 
   if (!def) return <Banner kind="error">Unknown master.</Banner>;
-  const base = me?.role_code === 'AM' ? '/am' : '/ho';
-
+  const base = me?.role_code === 'AM' ? '/am' : '/ho';   // only HO and AM have write or approval links
   async function sendToggle(summary: string) {
     if (!toggle || !def) return;
     setBusy(true); setDialogError(null);
@@ -85,7 +84,12 @@ export function MasterList() {
           </tbody>
         </table>
       </div>
-      {!isHo && <p className="mt-2 text-xs text-slate-500">Changes to this register are proposed by HO and approved in <Link className="underline" to={`${base}/approvals`}>Master change approvals</Link>.</p>}
+      {!isHo && (
+        <p className="mt-2 text-xs text-slate-500">
+          Changes to this register are proposed by HO and approved by AM (Tech)
+          {me?.role_code === 'AM' && <> in <Link className="underline" to={`${base}/approvals`}>Master change approvals</Link></>}.
+        </p>
+      )}
       {toggle && ctx && (
         <ReasonDialog
           title={`${toggle.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'} this ${def.singular}?`}
