@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CARD_STATUS_LABEL, CARD_STATUS_STYLE } from '../lib/ops';
+import { JC_STATUS_LABEL as CARD_STATUS_LABEL, JC_STATUS_STYLE as CARD_STATUS_STYLE } from '../lib/jobs';
 
 export function CardBadge({ status }: { status: string }) {
   return (

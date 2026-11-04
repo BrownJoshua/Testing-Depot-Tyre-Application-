@@ -12,10 +12,10 @@ import { Complaints } from './pages/Complaints';
 import { DutyRoster } from './pages/DutyRoster';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
-import { SchedulePlanner } from './pages/SchedulePlanner';
 import { TyreRegister } from './pages/TyreRegister';
 import { TmComplaint } from './pages/tm/TmComplaint';
 import { TmDuty } from './pages/tm/TmDuty';
+import { TmInspect } from './pages/tm/TmInspect';
 import { TmJobs } from './pages/tm/TmJobs';
 import { JobCards } from './pages/JobCards';
 import { MasterForm } from './pages/MasterForm';
@@ -57,7 +57,6 @@ export default function App() {
           <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
-          <Route path="planner" element={<SchedulePlanner />} />
           <Route path="roster" element={<DutyRoster />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
@@ -73,7 +72,6 @@ export default function App() {
           <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
-          <Route path="planner" element={<SchedulePlanner />} />
           <Route path="duty" element={<DutyRoster />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
@@ -87,6 +85,7 @@ export default function App() {
       <Route path="/tm/*"  element={<ProtectedRoute allow="TM"><MobileShell>
         <Routes>
           <Route index element={<TmJobs />} />
+          <Route path="job-card/:id" element={<TmInspect />} />
           <Route path="duty" element={<TmDuty />} />
           <Route path="complaint" element={<TmComplaint />} />
           <Route path="*" element={<TmJobs />} />

@@ -3,91 +3,93 @@ import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/masters';
-import { loadOps, raiseComplaint, rejectComplaint, type OpsCtx } from '../lib/ops';
+import { closeComplaint, loadJobs, raiseComplaint, reinspectComplaint, SOURCE_LABEL, type JobsCtx } from '../lib/jobs';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader, ReasonDialog } from '../components/ui';
 import { CardBadge, Modal } from '../components/OpsBits';
 
-/** Depot complaints. Tyre IC triages (job card or reject); Tyre IC, Supervisor (log sheet) and Tyre Man raise. */
+const STATES = ['NEW', 'PENDING_INSPECTION', 'APPROVED', 'REJECTED', 'CLOSED', ''];
+const STATE_CHIP: Record<string, string> = { NEW: 'New', PENDING_INSPECTION: 'Pending inspection', APPROVED: 'Approved', REJECTED: 'Rejected', CLOSED: 'Closed', '': 'All' };
+
+/** Depot complaints. A complaint never becomes a job directly: the Tyre IC puts it on a job card, an inspection approves or rejects it. */
 export function Complaints() {
   const { me } = useAuth();
   const role = me?.role_code;
   const base = role === 'SUP' ? '/sup' : '/tic';
-  const [ctx, setCtx] = useState<OpsCtx | null>(null);
+  const [ctx, setCtx] = useState<JobsCtx | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [status, setStatus] = useState('NEW');
+  const [state, setState] = useState('NEW');
   const [raising, setRaising] = useState(false);
-  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [closing, setClosing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
-  const [f, setF] = useState({ fleet: '', position: '', type: '', remarks: '', driver: '', driverRef: '', runKm: '' });
+  const empty = { fleet: '', tyre: '', type: '', remarks: '', driver: '', driverRef: '', runKm: '' };
+  const [f, setF] = useState(empty);
 
-  const load = useCallback(() => { loadOps().then(setCtx).catch((e: Error) => setError(e.message)); }, []);
+  const load = useCallback(() => { loadJobs().then(setCtx).catch((e: Error) => setError(e.message)); }, []);
   useEffect(load, [load]);
 
   const fleet = (id: string) => ctx?.fleets.find((x) => x.id === id);
-  const rows = useMemo(() => (ctx?.complaints ?? []).filter((c) => !status || c.status === status), [ctx, status]);
+  const tyre = (id: string | null) => ctx?.tyres.find((x) => x.id === id);
+  const card = (id: string | null) => ctx?.cards.find((x) => x.id === id);
+  const rows = useMemo(() => (ctx?.complaints ?? []).filter((c) => !state || c.state === state), [ctx, state]);
+  const fleetTyres = (ctx?.tyres ?? []).filter((t) => t.fleet_id === f.fleet && t.stock_place === 'FITTED').sort((a, b) => a.fitted_position.localeCompare(b.fitted_position));
   const canRaise = role === 'TIC' || role === 'SUP';
-  const selFleet = fleet(f.fleet);
+  const myFleets = (ctx?.fleets ?? []).filter((x) => x.status === 'ACTIVE');
 
-  async function raise() {
+  async function run(fn: () => Promise<unknown>, ok: string, done: () => void) {
     setBusy(true); setDialogError(null);
-    try {
-      const log = role === 'SUP' ? { driver_name: f.driver.trim(), driver_ref: f.driverRef.trim() || null, run_km: f.runKm ? Number(f.runKm) : null } : undefined;
-      await raiseComplaint(f.fleet, f.position || null, f.type, f.remarks, log);
-      setNotice('Complaint raised.'); setRaising(false); setF({ fleet: '', position: '', type: '', remarks: '', driver: '', driverRef: '', runKm: '' }); load();
-    } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
+    try { await fn(); setNotice(ok); done(); load(); } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
   }
-  async function reject(remarks: string) {
-    if (!rejecting) return;
-    setBusy(true); setDialogError(null);
-    try { await rejectComplaint(rejecting, remarks); setNotice('Complaint rejected.'); setRejecting(null); load(); }
-    catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
-  }
+  const raise = () => run(() => raiseComplaint(f.fleet, f.tyre || null, f.type, f.remarks, null,
+    role === 'SUP' ? { driver_name: f.driver.trim(), driver_ref: f.driverRef.trim() || null, run_km: f.runKm ? Number(f.runKm) : null } : undefined),
+    'Complaint raised.', () => { setRaising(false); setF(empty); });
 
   return (
     <div>
-      <PageHeader
-        title={role === 'SUP' ? 'Log Sheet Complaints' : 'Complaints'}
-        subtitle={role === 'TIC' ? 'Review each complaint: create a job card for it, or reject it with a reason.' : 'Complaints of your depot.'}
-        action={canRaise && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setDialogError(null); setRaising(true); }}><Plus size={16} /> Raise complaint</button>}
-      />
+      <PageHeader title={role === 'SUP' ? 'Log Sheet Complaints' : 'Complaints'}
+        subtitle={role === 'TIC' ? 'Put a new complaint on a job card. The inspector then approves or rejects it.' : 'Complaints of your depot.'}
+        action={canRaise && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setDialogError(null); setRaising(true); }}><Plus size={16} /> Raise complaint</button>} />
       {error && <Banner kind="error">{error}</Banner>}
       {notice && <Banner kind="ok">{notice}</Banner>}
       <div className="mb-3 flex flex-wrap gap-2">
-        {['NEW', 'ASSIGNED', 'CLOSED', 'REJECTED', ''].map((s) => (
-          <button key={s || 'all'} onClick={() => setStatus(s)}
-            className={`rounded-full border px-3 py-1 text-sm ${status === s ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>
-            {s ? s.charAt(0) + s.slice(1).toLowerCase() : 'All'}
+        {STATES.map((s) => (
+          <button key={s || 'all'} onClick={() => setState(s)}
+            className={`rounded-full border px-3 py-1 text-sm ${state === s ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>
+            {STATE_CHIP[s]}{ctx ? ` (${s ? ctx.complaints.filter((c) => c.state === s).length : ctx.complaints.length})` : ''}
           </button>
         ))}
       </div>
       <div className={`${cardCls} overflow-x-auto`}>
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-2">Complaint</th><th className="px-4 py-2">Fleet</th><th className="px-4 py-2">Position</th><th className="px-4 py-2">Type</th><th className="px-4 py-2">Raised</th><th className="px-4 py-2">Status</th>{role === 'TIC' && <th className="px-4 py-2 text-right">Actions</th>}</tr>
+            <tr><th className="px-4 py-2">Complaint ID</th><th className="px-4 py-2">Fleet</th><th className="px-4 py-2">Tyre</th><th className="px-4 py-2">Complaint</th><th className="px-4 py-2">Raised</th><th className="px-4 py-2">Status</th>{role === 'TIC' && <th className="px-4 py-2 text-right">Actions</th>}</tr>
           </thead>
           <tbody>
             {!ctx && !error && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-500">Loading…</td></tr>}
             {ctx && rows.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-500">No complaints here.</td></tr>}
             {rows.map((c) => (
               <tr key={c.id} className="border-t border-slate-100 align-top">
-                <td className="px-4 py-2 font-medium text-slate-900">{c.complaint_no}<div className="text-xs font-normal text-slate-500">{c.source.replace('_', ' ').toLowerCase()}</div></td>
+                <td className="px-4 py-2 font-medium text-slate-900">{c.complaint_no}<div className="text-xs font-normal text-slate-500">{SOURCE_LABEL[c.source]}</div></td>
                 <td className="px-4 py-2">{fleet(c.fleet_id)?.fleet_no ?? '—'}</td>
-                <td className="px-4 py-2">{c.position ?? 'General'}</td>
-                <td className="px-4 py-2">{ctx?.complaintTypes.find((t) => t.id === c.complaint_type_id)?.complaint_name ?? '—'}
+                <td className="px-4 py-2">{tyre(c.tyre_id) ? `${tyre(c.tyre_id)?.mtc_no} · ${tyre(c.tyre_id)?.fitted_position}` : '—'}</td>
+                <td className="px-4 py-2">
+                  <span className="mr-1 rounded bg-slate-100 px-1.5 text-xs">{ctx?.complaintTypes.find((t) => t.id === c.complaint_type_id)?.complaint_code}</span>
+                  {ctx?.complaintTypes.find((t) => t.id === c.complaint_type_id)?.complaint_name}
                   {c.remarks && <div className="text-xs text-slate-500">{c.remarks}</div>}
-                  {c.decision_remarks && <div className="text-xs text-red-700">Rejected: {c.decision_remarks}</div>}</td>
+                  {c.decision_reason && <div className="text-xs text-red-700">Rejected: {c.decision_reason}</div>}
+                </td>
                 <td className="px-4 py-2 text-slate-600">{fmtDateTime(c.raised_at)}</td>
-                <td className="px-4 py-2"><CardBadge status={c.status} /></td>
+                <td className="px-4 py-2"><CardBadge status={c.state} /></td>
                 {role === 'TIC' && (
                   <td className="px-4 py-2">
-                    <div className="flex justify-end gap-2">
-                      {c.status === 'NEW' && <>
-                        <Link className={btnPrimary} to={`${base}/job-cards?complaint=${c.id}`}>Create job card</Link>
-                        <button className={btnPlain} onClick={() => { setDialogError(null); setRejecting(c.id); }}>Reject</button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {c.state === 'NEW' && <Link className={btnPrimary} to={`${base}/job-cards?complaint=${c.id}`}>Create job card</Link>}
+                      {c.job_card_id && <Link className={btnPlain} to={`${base}/job-cards/${c.job_card_id}`}>{card(c.job_card_id)?.job_card_no ?? 'Open job card'}</Link>}
+                      {c.state === 'REJECTED' && <>
+                        <button className={btnPlain} onClick={() => void run(() => reinspectComplaint(c.id), 'Complaint reopened. Assign an inspection on its job card.', () => undefined)}>Re-inspect</button>
+                        <button className={btnPlain} onClick={() => { setDialogError(null); setClosing(c.id); }}>Close complaint</button>
                       </>}
-                      {c.job_card_id && <Link className={btnPlain} to={`${base}/job-cards/${c.job_card_id}`}>Open job card</Link>}
                     </div>
                   </td>
                 )}
@@ -102,21 +104,21 @@ export function Complaints() {
           {dialogError && <Banner kind="error">{dialogError}</Banner>}
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void raise(); }}>
             <Field label="Fleet *">
-              <select className={inputCls} value={f.fleet} onChange={(e) => setF({ ...f, fleet: e.target.value, position: '' })} required>
+              <select className={inputCls} value={f.fleet} onChange={(e) => setF({ ...f, fleet: e.target.value, tyre: '' })} required>
                 <option value="">Select…</option>
-                {ctx.fleets.filter((x) => x.status === 'ACTIVE').map((x) => <option key={x.id} value={x.id}>{x.fleet_no} — {x.registration_no}</option>)}
+                {myFleets.map((x) => <option key={x.id} value={x.id}>{x.fleet_no} — {x.registration_no}</option>)}
               </select>
             </Field>
-            <Field label="Wheel / tyre position">
-              <select className={inputCls} value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })}>
-                <option value="">General</option>
-                {(selFleet?.position_layout ?? []).map((p: string) => <option key={p} value={p}>{p}</option>)}
+            <Field label="Tyre">
+              <select className={inputCls} value={f.tyre} onChange={(e) => setF({ ...f, tyre: e.target.value })}>
+                <option value="">General (no specific tyre)</option>
+                {fleetTyres.map((t) => <option key={t.id} value={t.id}>{t.fitted_position} · {t.mtc_no}</option>)}
               </select>
             </Field>
-            <Field label="Complaint type *">
+            <Field label="Complaint *">
               <select className={inputCls} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} required>
                 <option value="">Select…</option>
-                {ctx.complaintTypes.filter((t) => t.status === 'ACTIVE').map((t) => <option key={t.id} value={t.id}>{t.complaint_name}</option>)}
+                {ctx.complaintTypes.filter((t) => t.status === 'ACTIVE').map((t) => <option key={t.id} value={t.id}>{t.complaint_code} · {t.complaint_name}</option>)}
               </select>
             </Field>
             {role === 'SUP' && <>
@@ -134,10 +136,8 @@ export function Complaints() {
           </form>
         </Modal>
       )}
-      {rejecting && (
-        <ReasonDialog title="Reject this complaint?" label="Reason (required)" confirmLabel="Reject complaint" danger required busy={busy}
-          error={dialogError} onConfirm={(t) => void reject(t)} onCancel={() => setRejecting(null)} />
-      )}
+      {closing && <ReasonDialog title="Close this complaint?" label="Remarks (optional)" confirmLabel="Close complaint" required={false} busy={busy} error={dialogError}
+        onConfirm={(t) => void run(() => closeComplaint(closing, t), 'Complaint closed.', () => setClosing(null))} onCancel={() => setClosing(null)} />}
     </div>
   );
 }

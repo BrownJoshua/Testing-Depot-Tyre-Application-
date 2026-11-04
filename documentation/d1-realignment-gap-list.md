@@ -43,3 +43,9 @@ Each step: migration + test through the runner, screens, a browser check, then c
 
 - Seed values come from the prototype's sample data (generator in `supabase/admin/d1-seed/`).
 - The tests of batches 6-8 (`0013`..`0015`) describe the earlier design; some assertions (fleet counts) no longer hold after 0018. They are kept as history and replaced by new tests as each step lands.
+
+## Progress
+
+- **Step 1 (done):** tyre register, 300 fleets, folios (0017, 0018).
+- **Step 2 (done, 2026-11-04):** job model v2 (0019-0021): rows 4 (job master), 5 (job card, no Cancel), 6 (Job ID per tyre), 7 (New Job Card: Complaint and Job Code types), 8 (complaint through inspection, re-inspect / close), 9 (inspection and work assigned separately, 1-3 Tyre Men per Job ID, due date + shift, estimated time), 10 (Final Inspection Pass / Fail / Rework), 19 (JC-6201, JID-4201, CMPID-0601, INSID-0001). Row 16 (Job Card Detail) is built without the WSR / GIN / MRN / GRN / order tables (step 4). Complaint photo and Fail meaning remain open. Row 17 is partly done: My Jobs, inspection, Start Work, Complete.
+- The batch 8 Schedule Planner screen is removed until step 3 (it depended on the old job cards). Fleet Grouping and Duty Posting still work.
