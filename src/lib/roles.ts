@@ -82,8 +82,9 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Live Tyre Stock and Register', arrives: 'Stage 5b' },
   ],
   TM: [
-    { label: 'My Jobs', arrives: 'Stage 6' },
-    { label: 'Duty & Shift', arrives: 'Stage 6' },
+    { label: 'My Jobs', arrives: 'Stage 6', path: '/tm' },
+    { label: 'Duty & Shift', arrives: 'Stage 6', path: '/tm/duty' },
+    { label: 'Raise complaint', arrives: 'Stage 6', path: '/tm/complaint' },
     { label: 'My WSR', arrives: 'Stage 6' },
     { label: 'GRN', arrives: 'Stage 6' },
     { label: 'MRN', arrives: 'Stage 6' },

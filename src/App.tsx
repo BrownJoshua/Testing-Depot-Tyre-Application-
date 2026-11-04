@@ -13,6 +13,9 @@ import { DutyRoster } from './pages/DutyRoster';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { SchedulePlanner } from './pages/SchedulePlanner';
+import { TmComplaint } from './pages/tm/TmComplaint';
+import { TmDuty } from './pages/tm/TmDuty';
+import { TmJobs } from './pages/tm/TmJobs';
 import { JobCards } from './pages/JobCards';
 import { MasterForm } from './pages/MasterForm';
 import { MasterList } from './pages/MasterList';
@@ -76,7 +79,14 @@ export default function App() {
       </AppShell></ProtectedRoute>} />
 
       {/* Tyre Man: mobile-only */}
-      <Route path="/tm/*"  element={<ProtectedRoute allow="TM"><MobileShell><RoleHome /></MobileShell></ProtectedRoute>} />
+      <Route path="/tm/*"  element={<ProtectedRoute allow="TM"><MobileShell>
+        <Routes>
+          <Route index element={<TmJobs />} />
+          <Route path="duty" element={<TmDuty />} />
+          <Route path="complaint" element={<TmComplaint />} />
+          <Route path="*" element={<TmJobs />} />
+        </Routes>
+      </MobileShell></ProtectedRoute>} />
 
       <Route path="*" element={<RootRedirect />} />
     </Routes>

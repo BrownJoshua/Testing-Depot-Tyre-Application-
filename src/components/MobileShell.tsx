@@ -1,15 +1,20 @@
 import type { ReactNode } from 'react';
-import { CalendarDays, ClipboardList, LogOut, PackageCheck, PackagePlus, Smartphone, Trash2, Undo2 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { CalendarDays, ClipboardList, LogOut, MessageSquareWarning, PackageCheck, PackagePlus, Smartphone, Trash2, Undo2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
-const TABS = [
-  { label: 'My Jobs', Icon: ClipboardList },
-  { label: 'Duty & Shift', Icon: CalendarDays },
+/** `to` set = a working screen; otherwise a placeholder for a later stage. */
+const TABS: { label: string; Icon: typeof ClipboardList; to?: string; end?: boolean }[] = [
+  { label: 'My Jobs', Icon: ClipboardList, to: '/tm', end: true },
+  { label: 'Duty & Shift', Icon: CalendarDays, to: '/tm/duty' },
+  { label: 'Complaint', Icon: MessageSquareWarning, to: '/tm/complaint' },
   { label: 'My WSR', Icon: PackagePlus },
   { label: 'GRN', Icon: PackageCheck },
   { label: 'MRN', Icon: Undo2 },
   { label: 'SRN', Icon: Trash2 },
 ];
+const LIVE = TABS.filter((t) => t.to);
+const LATER = TABS.filter((t) => !t.to);
 
 /**
  * Tyre Man: a MOBILE-ONLY interface. On a wide screen (tablet landscape and desktop) it shows an
@@ -45,14 +50,16 @@ export function MobileShell({ children }: { children: ReactNode }) {
           </button>
         </header>
         <main className="flex-1 p-4 pb-28">{children}</main>
-        <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="Sections (placeholders)">
-          {TABS.map(({ label, Icon }) => (
-            <span key={label} className="flex flex-col items-center gap-1 py-2 text-[10px] text-slate-500">
-              <Icon size={20} />
+        <nav className="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
+          {LIVE.map(({ label, Icon, to, end }) => (
+            <NavLink key={label} to={to!} end={end}
+              className={({ isActive }) => `flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-xs font-medium ${isActive ? 'text-blue-700' : 'text-slate-600'}`}>
+              <Icon size={22} />
               {label}
-            </span>
+            </NavLink>
           ))}
         </nav>
+        <p className="sr-only">Arriving in later stages: {LATER.map((t) => t.label).join(', ')}.</p>
       </div>
     </>
   );
