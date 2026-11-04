@@ -13,6 +13,7 @@ import { DutyRoster } from './pages/DutyRoster';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { TyreRegister } from './pages/TyreRegister';
+import { SchedulePlanner } from './pages/SchedulePlanner';
 import { TmComplaint } from './pages/tm/TmComplaint';
 import { TmDuty } from './pages/tm/TmDuty';
 import { TmInspect } from './pages/tm/TmInspect';
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="planner" element={<SchedulePlanner />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
           <Route path="roster" element={<DutyRoster />} />
@@ -70,6 +72,7 @@ export default function App() {
       <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="planner" element={<SchedulePlanner />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
           <Route path="duty" element={<DutyRoster />} />

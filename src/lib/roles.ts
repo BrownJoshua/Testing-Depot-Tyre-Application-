@@ -64,7 +64,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
   SUP: [
     { label: 'Grouping Approvals', arrives: 'Stage 5a', path: '/sup/grouping' },
     { label: 'Roster Approvals', arrives: 'Stage 5a', path: '/sup/roster' },
-    { label: 'Schedule Planner (monitor)', arrives: 'Stage 5a' },
+    { label: 'Schedule Planner (monitor)', arrives: 'Stage 5a', path: '/sup/planner' },
     { label: 'GIN / Indent / Skill approvals', arrives: 'Stage 5b' },
     { label: 'Job Card Register (monitor)', arrives: 'Stage 5a', path: '/sup/job-cards' },
     { label: 'Log Sheet Complaints', arrives: 'Stage 5a', path: '/sup/complaints' },
@@ -75,7 +75,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Dashboard', arrives: 'Stage 5a' },
     { label: 'Job Card Register', arrives: 'Stage 5a', path: '/tic/job-cards' },
     { label: 'Complaints', arrives: 'Stage 5a', path: '/tic/complaints' },
-    { label: 'Schedule Planner', arrives: 'Stage 5a' },
+    { label: 'Schedule Planner', arrives: 'Stage 5a', path: '/tic/planner' },
     { label: 'Fleet Register', arrives: 'Stage 5a', path: '/tic/m/fleets' },
     { label: 'Fleet Grouping', arrives: 'Stage 5a', path: '/tic/grouping' },
     { label: 'Duty Posting', arrives: 'Stage 5a', path: '/tic/duty' },
