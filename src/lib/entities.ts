@@ -11,7 +11,7 @@ export interface Ctx {
   sizes: Row[]; makes: Row[]; models: Row[]; folios: Row[];
   folioLocs: Record<string, string[]>;
   fleetTypes: Row[]; fleetTypeSizes: Record<string, string[]>; fleets: Row[]; depots: Row[]; jobs: Row[];
-  complaintTypes: Row[]; complaintJobs: Record<string, string[]>;
+  complaintTypes: Row[]; complaintJobs: Record<string, string[]>; schedules: Row[];
 }
 
 async function all(table: string, order: string): Promise<Row[]> {
@@ -21,11 +21,12 @@ async function all(table: string, order: string): Promise<Row[]> {
 }
 
 export async function loadCtx(): Promise<Ctx> {
-  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs] = await Promise.all([
+  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs, schedules] = await Promise.all([
     all('vendors', 'vendor_code'), all('ref_values', 'sort_order'), all('tyre_sizes', 'size_code'), all('tyre_makes', 'name'),
     all('tyre_models', 'model_name'), all('tyre_folios', 'folio_no'), all('tyre_folio_locations', 'location_type'),
     all('fleet_types', 'fleet_make'), all('fleet_type_tyre_sizes', 'tyre_size_id'), all('fleets', 'fleet_no'),
     all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'), all('complaint_types', 'complaint_code'), all('complaint_type_jobs', 'job_id'),
+    all('maintenance_schedules', 'schedule_code'),
   ]);
   const complaintJobs: Record<string, string[]> = {};
   for (const l of ctJobs) (complaintJobs[l.complaint_type_id] ??= []).push(jobs.find((j) => j.id === l.job_id)?.job_code ?? '');
@@ -34,7 +35,7 @@ export async function loadCtx(): Promise<Ctx> {
   const fleetTypeSizes: Record<string, string[]> = {};
   for (const l of ftSizes) (fleetTypeSizes[l.fleet_type_id] ??= []).push(sizes.find((x) => x.id === l.tyre_size_id)?.size_code ?? '');
   const depots = orgs.filter((o) => o.unit_type === 'DEPOT');
-  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs };
+  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs, schedules };
 }
 
 export interface Option { value: string; label: string }
@@ -71,7 +72,8 @@ const WORK_CATEGORIES: Option[] = [
   ['TYRE_ROTATION', 'Tyre Rotation'], ['TYRE_DISCOUT', 'Tyre Discout'], ['CENSUS', 'Census'], ['TYRE_CHANGING', 'Tyre Changing'],
   ['TYRE_REMOVAL', 'Tyre Removal'], ['TYRE_FITMENT', 'Tyre Fitment'], ['TYRE_SETTING', 'Tyre Setting'], ['TYRE_UNSETTING', 'Tyre Unsetting'],
 ].map(([value, label]) => ({ value, label }));
-const sizeOpts = (c: Ctx): Option[] => c.sizes.filter((s) => s.status === 'ACTIVE').map((s) => ({ value: s.size_code, label: s.size_code }));
+const SCHEDULE_CATEGORIES: Option[] = WORK_CATEGORIES.filter((w) => w.value !== 'TYRE_CHANGING' && !['TYRE_REMOVAL', 'TYRE_FITMENT', 'TYRE_SETTING', 'TYRE_UNSETTING'].includes(w.value));
+const sizeOpts =(c: Ctx): Option[] => c.sizes.filter((s) => s.status === 'ACTIVE').map((s) => ({ value: s.size_code, label: s.size_code }));
 const depotOpts = (c: Ctx): Option[] => c.depots.filter((d) => d.status === 'ACTIVE').map((d) => ({ value: d.code, label: d.name }));
 const fleetMakeOpts = (c: Ctx): Option[] => [...new Set(c.fleetTypes.filter((t) => t.status === 'ACTIVE').map((t) => t.fleet_make as string))].map((m) => ({ value: m, label: m }));
 const fleetModelOpts = (c: Ctx, f: Row): Option[] => c.fleetTypes.filter((t) => t.status === 'ACTIVE' && t.fleet_make === f.fleet_make).map((t) => ({ value: t.fleet_model, label: t.fleet_model }));
@@ -246,6 +248,33 @@ export const ENTITIES: EntityDef[] = [
       { label: 'Required jobs', value: (r, c) => (c.complaintJobs[r.id] ?? []).join(', ') || '—' },
     ],
     nameOf: (f) => `${f.complaint_code ?? ''} ${f.complaint_name ?? ''}`.trim() || 'complaint type',
+  },
+  {
+    type: 'maintenance_schedule', slug: 'schedules', title: 'Maintenance Configuration: schedules', singular: 'schedule',
+    hint: 'Only date-based schedules (every n days or n working days) exist for now; a working day is any day except Sunday.',
+    fields: [
+      { key: 'schedule_code', label: 'Schedule code', kind: 'text', createOnly: true, required: true, hint: 'e.g. SCH008' },
+      { key: 'schedule_name', label: 'Schedule name', kind: 'text', required: true },
+      { key: 'work_category', label: 'Work category', kind: 'select', required: true, options: () => SCHEDULE_CATEGORIES },
+      { key: 'job_code', label: 'Linked job', kind: 'select', hint: 'must belong to the same work category',
+        options: (c, f) => c.jobs.filter((j) => j.status === 'ACTIVE' && (!f.work_category || j.work_category === f.work_category)).map((j) => ({ value: j.job_code, label: `${j.job_code} — ${j.job_name}` })) },
+      { key: 'every_n_days', label: 'Every (days)', kind: 'number', required: true },
+      { key: 'uses_working_days', label: 'Count working days only', kind: 'bool' },
+      { key: 'due_days_after_assignment', label: 'Due days after assignment', kind: 'number' },
+      { key: 'effective_from', label: 'Effective from', kind: 'date', required: true },
+    ],
+    rows: (c) => c.schedules,
+    toForm: (r, c) => ({
+      schedule_code: r.schedule_code, schedule_name: r.schedule_name, work_category: r.work_category,
+      job_code: c.jobs.find((j) => j.id === r.job_id)?.job_code ?? null, every_n_days: r.every_n_days, uses_working_days: r.uses_working_days,
+      due_days_after_assignment: r.due_days_after_assignment, effective_from: r.effective_from,
+    }),
+    columns: [
+      { label: 'Code', value: (r) => r.schedule_code }, { label: 'Schedule', value: (r) => r.schedule_name },
+      { label: 'Frequency', value: (r) => `every ${r.every_n_days} ${r.uses_working_days ? 'working ' : ''}day${r.every_n_days === 1 ? '' : 's'}` },
+      { label: 'Effective from', value: (r) => r.effective_from },
+    ],
+    nameOf: (f) => `${f.schedule_code ?? ''} ${f.schedule_name ?? ''}`.trim() || 'schedule',
   },
 ];
 

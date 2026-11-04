@@ -9,7 +9,10 @@ import { MyRequests } from './pages/MyRequests';
 import { VendorForm } from './pages/VendorForm';
 import { VendorList } from './pages/VendorList';
 import { Complaints } from './pages/Complaints';
+import { DutyRoster } from './pages/DutyRoster';
+import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
+import { SchedulePlanner } from './pages/SchedulePlanner';
 import { JobCards } from './pages/JobCards';
 import { MasterForm } from './pages/MasterForm';
 import { MasterList } from './pages/MasterList';
@@ -46,6 +49,9 @@ export default function App() {
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
           <Route index element={<RoleHome />} />
+          <Route path="grouping" element={<FleetGrouping />} />
+          <Route path="planner" element={<SchedulePlanner />} />
+          <Route path="roster" element={<DutyRoster />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
           <Route path="complaints" element={<Complaints />} />
@@ -58,6 +64,9 @@ export default function App() {
       <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
         <Routes>
           <Route index element={<RoleHome />} />
+          <Route path="grouping" element={<FleetGrouping />} />
+          <Route path="planner" element={<SchedulePlanner />} />
+          <Route path="duty" element={<DutyRoster />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
           <Route path="complaints" element={<Complaints />} />
