@@ -14,6 +14,7 @@ export function MasterList() {
   const isHo = me?.role_code === 'HO';
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [q, setQ] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [toggle, setToggle] = useState<Row | null>(null);
@@ -26,8 +27,8 @@ export function MasterList() {
   const rows = useMemo(() => {
     if (!def || !ctx) return [];
     const t = q.trim().toLowerCase();
-    return def.rows(ctx).filter((r) => !t || def.columns.map((c) => c.value(r, ctx)).join(' ').toLowerCase().includes(t));
-  }, [def, ctx, q]);
+    return def.rows(ctx).filter((r) => (showInactive || r.status === 'ACTIVE') && (!t || def.columns.map((c) => c.value(r, ctx)).join(' ').toLowerCase().includes(t)));
+  }, [def, ctx, q, showInactive]);
 
   if (!def) return <Banner kind="error">Unknown master.</Banner>;
   const base = me?.role_code === 'AM' ? '/am' : '/ho';   // only HO and AM have write or approval links
@@ -53,9 +54,12 @@ export function MasterList() {
       />
       {error && <Banner kind="error">{error}</Banner>}
       {notice && <Banner kind="ok">{notice}</Banner>}
-      <div className="relative mb-3 max-w-sm">
-        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input className={`${inputCls} pl-9`} placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
+      <div className="mb-3 flex flex-wrap items-center gap-4">
+        <div className="relative w-full max-w-sm">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className={`${inputCls} pl-9`} placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Show inactive</label>
       </div>
       <div className={`${cardCls} overflow-x-auto`}>
         <table className="w-full min-w-[560px] text-sm">

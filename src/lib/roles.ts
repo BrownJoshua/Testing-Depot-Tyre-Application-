@@ -31,6 +31,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Tyre sizes', arrives: 'Stage 4', path: '/ho/m/tyre-sizes' },
     { label: 'Tyre makes', arrives: 'Stage 4', path: '/ho/m/tyre-makes' },
     { label: 'Tyre models', arrives: 'Stage 4', path: '/ho/m/tyre-models' },
+    { label: 'Tyre Register', arrives: 'Stage 5b', path: '/ho/tyres' },
     { label: 'Fleet Type Master', arrives: 'Stage 5a', path: '/ho/m/fleet-types' },
     { label: 'Fleet Register', arrives: 'Stage 5a', path: '/ho/m/fleets' },
     { label: 'Maintenance jobs', arrives: 'Stage 5a', path: '/ho/m/maintenance-jobs' },
@@ -52,6 +53,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Tyre sizes (read)', arrives: 'Stage 4', path: '/am/m/tyre-sizes' },
     { label: 'Tyre makes (read)', arrives: 'Stage 4', path: '/am/m/tyre-makes' },
     { label: 'Tyre models (read)', arrives: 'Stage 4', path: '/am/m/tyre-models' },
+    { label: 'Tyre Register', arrives: 'Stage 5b', path: '/am/tyres' },
     { label: 'Fleet Type Master (read)', arrives: 'Stage 5a', path: '/am/m/fleet-types' },
     { label: 'Fleet Register (read)', arrives: 'Stage 5a', path: '/am/m/fleets' },
     { label: 'Maintenance jobs (read)', arrives: 'Stage 5a', path: '/am/m/maintenance-jobs' },
@@ -67,7 +69,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Job Card Register (monitor)', arrives: 'Stage 5a', path: '/sup/job-cards' },
     { label: 'Log Sheet Complaints', arrives: 'Stage 5a', path: '/sup/complaints' },
     { label: 'Fleet Register', arrives: 'Stage 5a', path: '/sup/m/fleets' },
-    { label: 'Tyre Register', arrives: 'Stage 5b' },
+    { label: 'Tyre Register', arrives: 'Stage 5b', path: '/sup/tyres' },
   ],
   TIC: [
     { label: 'Dashboard', arrives: 'Stage 5a' },
@@ -79,7 +81,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Duty Posting', arrives: 'Stage 5a', path: '/tic/duty' },
     { label: 'Depot Indent / GIN / GRN', arrives: 'Stage 5b' },
     { label: 'WSR and Gate Pass', arrives: 'Stage 5b' },
-    { label: 'Live Tyre Stock and Register', arrives: 'Stage 5b' },
+    { label: 'Tyre Register', arrives: 'Stage 5b', path: '/tic/tyres' },
   ],
   TM: [
     { label: 'My Jobs', arrives: 'Stage 6', path: '/tm' },

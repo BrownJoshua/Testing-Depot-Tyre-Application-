@@ -13,6 +13,7 @@ import { DutyRoster } from './pages/DutyRoster';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { SchedulePlanner } from './pages/SchedulePlanner';
+import { TyreRegister } from './pages/TyreRegister';
 import { TmComplaint } from './pages/tm/TmComplaint';
 import { TmDuty } from './pages/tm/TmDuty';
 import { TmJobs } from './pages/tm/TmJobs';
@@ -28,6 +29,7 @@ export default function App() {
       {/* Desktop-first roles */}
       <Route path="/ho/*"  element={<ProtectedRoute allow="HO"><AppShell>
         <Routes>
+          <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="vendors" element={<VendorList />} />
           <Route path="vendors/new" element={<VendorForm />} />
@@ -41,6 +43,7 @@ export default function App() {
       </AppShell></ProtectedRoute>} />
       <Route path="/am/*"  element={<ProtectedRoute allow="AM"><AppShell>
         <Routes>
+          <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="approvals" element={<ApprovalInbox mode="pending" />} />
           <Route path="history" element={<ApprovalInbox mode="history" />} />
@@ -51,6 +54,7 @@ export default function App() {
       </AppShell></ProtectedRoute>} />
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
+          <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
           <Route path="planner" element={<SchedulePlanner />} />
@@ -66,6 +70,7 @@ export default function App() {
       {/* Tyre IC: one responsive layout for desktop, tablet and phone */}
       <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
         <Routes>
+          <Route path="tyres" element={<TyreRegister />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
           <Route path="planner" element={<SchedulePlanner />} />
