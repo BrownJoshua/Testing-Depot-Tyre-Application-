@@ -65,6 +65,8 @@ export function friendlyError(message: string): string {
   if (/permission denied|insufficient_privilege/i.test(m)) return 'You are not allowed to do this.';
   if (/mcr_one_open_per_target/i.test(m)) return 'This record already has an open change request. Withdraw or finish it first.';
   if (/duplicate key|already exists/i.test(m)) return m;
+  // "waits for the previous step (TYRE_UNSETTING)" -> "(Tyre Unsetting)"
+  if (/previous step \(/.test(m)) return m.replace(/\(([A-Z_]+)\)/, (_, c: string) => `(${c.split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')})`);
   return m || 'Something went wrong. Please try again.';
 }
 
