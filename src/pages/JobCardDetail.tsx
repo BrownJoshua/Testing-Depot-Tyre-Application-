@@ -9,8 +9,10 @@ import {
 } from '../lib/jobs';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader, ReasonDialog } from '../components/ui';
 import { CardBadge, Modal } from '../components/OpsBits';
+import { CardDocsView, ProvideTyreDlg, ReceiveGinDlg } from '../components/CardDocs';
+import { loadCardDocs, provideTyre, receiveGin, type CardDocs } from '../lib/stock';
 
-type Dlg = { k: 'inspection' } | { k: 'work' } | { k: 'inspect'; ins: Row } | { k: 'final' } | { k: 'behalf'; job: Row } | { k: 'close'; c: Row };
+type Dlg = { k: 'gin'; gin: Row } | { k: 'provide'; job: Row } | { k: 'inspection' } | { k: 'work' } | { k: 'inspect'; ins: Row } | { k: 'final' } | { k: 'behalf'; job: Row } | { k: 'close'; c: Row };
 const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
 /** One job card, one format: strip, complaints, inspections, Job IDs, final inspection, timeline, and the footer actions. */
@@ -21,6 +23,7 @@ export function JobCardDetail() {
   const base = me?.role_code === 'SUP' ? '/sup' : '/tic';
   const [ctx, setCtx] = useState<JobsCtx | null>(null);
   const [detail, setDetail] = useState<{ events: Row[]; finals: Row[]; workAssignments: Row[] } | null>(null);
+  const [docs, setDocs] = useState<CardDocs | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dlg, setDlg] = useState<Dlg | null>(null);
@@ -29,7 +32,7 @@ export function JobCardDetail() {
 
   const load = useCallback(() => {
     if (!id) return;
-    Promise.all([loadJobs(), loadCardDetail(id)]).then(([c, d]) => { setCtx(c); setDetail(d); }).catch((e: Error) => setError(e.message));
+    Promise.all([loadJobs(), loadCardDetail(id), loadCardDocs(id)]).then(([c, d, s]) => { setCtx(c); setDetail(d); setDocs(s); }).catch((e: Error) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
 
@@ -132,11 +135,12 @@ export function JobCardDetail() {
                 <td className="px-4 py-2 font-medium">{j.job_id_no}{j.rework_of && <div className="text-xs font-normal text-amber-700">Rework of {jobIds.find((x) => x.id === j.rework_of)?.job_id_no}</div>}</td>
                 <td className="px-4 py-2">{complaints.find((c) => c.id === j.complaint_id)?.complaint_no ?? '—'}</td>
                 <td className="px-4 py-2"><span className="mr-1 rounded bg-slate-100 px-1.5 text-xs">{jobOf(j)?.job_code}</span>{jobOf(j)?.job_name}<div className="text-xs text-slate-500">{fmtMinutes(j.estimated_minutes)}</div></td>
-                <td className="px-4 py-2">{tyreLabel(j.tyre_id)}</td><td className="px-4 py-2">{assignedTo(j.id)}</td><td className="px-4 py-2"><CardBadge status={j.status} /></td>
+                <td className="px-4 py-2">{tyreLabel(j.tyre_id)}{(j.wait_for ?? []).some((w: string) => !['DONE', 'CLOSED'].includes(jobIds.find((x) => x.id === w)?.status ?? 'DONE')) && j.status === 'ASSIGNED' && <div className="text-xs text-slate-500">Locked until the earlier step is done</div>}</td><td className="px-4 py-2">{assignedTo(j.id)}</td><td className="px-4 py-2"><CardBadge status={j.status} /></td>
                 <td className="px-4 py-2 text-slate-600">{j.done_at ? <>{who(j.done_by)}<div className="text-xs">{fmtDateTime(j.done_at)}{j.on_behalf_reason && ` · on behalf: ${j.on_behalf_reason}`}</div></> : '—'}</td>
                 <td className="px-4 py-2"><div className="flex justify-end gap-2">
                   {mine(j) && j.status === 'ASSIGNED' && <button className={btnPlain} disabled={busy} onClick={() => void act(() => startJobId(j.id), 'Work started.')}>Start Work</button>}
                   {mine(j) && j.status === 'STARTED' && <button className={btnPrimary} disabled={busy} onClick={() => void act(() => completeJobId(j.id, null), 'Job ID completed.')}>Complete</button>}
+                  {isTic && j.status === 'WAITING_FOR_TYRE' && <button className={btnPlain} onClick={() => { setDlgError(null); setDlg({ k: 'provide', job: j }); }}>Provide tyre</button>}
                   {isTic && !mine(j) && ['ASSIGNED', 'STARTED'].includes(j.status) && <button className={btnPlain} onClick={() => { setDlgError(null); setDlg({ k: 'behalf', job: j }); }}>Enter on behalf</button>}
                 </div></td>
               </tr>
@@ -145,7 +149,7 @@ export function JobCardDetail() {
         </table>
       </section>
 
-      <Banner kind="info">WSR, GIN, MRN, GRN, Removal Orders, Fitment Orders and the Scrap Return Note appear here once the stock documents are built (a later step of the D1 realignment).</Banner>
+      {docs && <CardDocsView ctx={ctx} docs={docs} canReceive={isTic} onReceive={(g) => { setDlgError(null); setDlg({ k: 'gin', gin: g }); }} />}
 
       {detail && detail.finals.length > 0 && (
         <section className={`${cardCls} p-4`}><h2 className="mb-2 font-semibold text-slate-900">Final Inspection</h2>
@@ -172,6 +176,10 @@ export function JobCardDetail() {
         onSave={(r, remarks, jobs) => void act(() => finalInspect(card.id, r, remarks, jobs), r === 'PASS' ? 'Passed. The job card is completed.' : r === 'REWORK' ? 'Sent back for rework.' : 'Final inspection failed.')} />}
       {dlg?.k === 'behalf' && <ReasonDialog title={`Enter ${dlg.job.job_id_no} on behalf of the Tyre Man?`} label="Reason (required)" confirmLabel="Complete" required busy={busy} error={dlgError}
         onConfirm={(t) => void act(() => completeJobId(dlg.job.id, t), 'Job ID completed on behalf.')} onCancel={() => setDlg(null)} />}
+      {dlg?.k === 'gin' && docs && <ReceiveGinDlg ctx={ctx} docs={docs} gin={dlg.gin} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
+        onSave={(r) => void act(() => receiveGin(dlg.gin.id, r), 'GRN created.')} />}
+      {dlg?.k === 'provide' && <ProvideTyreDlg ctx={ctx} job={dlg.job} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
+        onSave={(t) => void act(() => provideTyre(dlg.job.id, t), 'Tyre provided. Assign the Fitment if the card is not assigned yet.')} />}
       {dlg?.k === 'close' && <ReasonDialog title="Close this complaint?" label="Remarks (optional)" confirmLabel="Close complaint" required={false} busy={busy} error={dlgError}
         onConfirm={(t) => void act(() => closeComplaint(dlg.c.id, t), 'Complaint closed.')} onCancel={() => setDlg(null)} />}
     </div>

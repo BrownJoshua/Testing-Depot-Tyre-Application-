@@ -80,7 +80,9 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Fleet Grouping', arrives: 'Stage 5a', path: '/tic/grouping' },
     { label: 'Duty Posting', arrives: 'Stage 5a', path: '/tic/duty' },
     { label: 'Depot Indent / GIN / GRN', arrives: 'Stage 5b' },
-    { label: 'WSR and Gate Pass', arrives: 'Stage 5b' },
+    { label: 'WSR and WSR GIN', arrives: 'Stage 5b', path: '/tic/wsr' },
+    { label: 'Material Return GRN', arrives: 'Stage 5b', path: '/tic/material-return' },
+    { label: 'Scrap Return Note', arrives: 'Stage 5b', path: '/tic/srn' },
     { label: 'Tyre Register', arrives: 'Stage 5b', path: '/tic/tyres' },
   ],
   TM: [

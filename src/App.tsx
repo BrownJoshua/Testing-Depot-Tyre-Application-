@@ -14,6 +14,7 @@ import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { TyreRegister } from './pages/TyreRegister';
 import { SchedulePlanner } from './pages/SchedulePlanner';
+import { ReturnGrnPage, SrnPage, WsrPage } from './pages/StockDocs';
 import { TmComplaint } from './pages/tm/TmComplaint';
 import { TmDuty } from './pages/tm/TmDuty';
 import { TmInspect } from './pages/tm/TmInspect';
@@ -73,6 +74,9 @@ export default function App() {
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="planner" element={<SchedulePlanner />} />
+          <Route path="wsr" element={<WsrPage />} />
+          <Route path="material-return" element={<ReturnGrnPage />} />
+          <Route path="srn" element={<SrnPage />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
           <Route path="duty" element={<DutyRoster />} />

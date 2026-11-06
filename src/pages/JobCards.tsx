@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { createCard, daysBetween, JC_STATUS_LABEL, loadJobs, ONGOING, TYPE_LABEL, type JobsCtx, type NewCard, type Row } from '../lib/jobs';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader } from '../components/ui';
 import { CardBadge, Modal } from '../components/OpsBits';
+import { TyreChangeForm } from '../components/TyreChangeForm';
 
 type Tile = '' | 'ONGOING' | 'OVERDUE' | 'COMPLETED';
 const CLOSED = ['COMPLETED', 'CLOSED'];
@@ -22,6 +23,7 @@ export function JobCards() {
   const [tile, setTile] = useState<Tile>('');
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
+  const [tyreChange, setTyreChange] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const blank: NewCard = { type: 'COMPLAINT', fleet: null, tyres: [], jobCodes: [], complaints: [], newComplaints: [], expected: null, shift: null, instruction: '' };
@@ -65,7 +67,8 @@ export function JobCards() {
 
   const fleetTyres = (ctx?.tyres ?? []).filter((t) => f.fleet && t.fleet_id === f.fleet && t.stock_place === 'FITTED').sort((a, b) => a.fitted_position.localeCompare(b.fitted_position));
   const newOnes = (ctx?.complaints ?? []).filter((c) => c.state === 'NEW' && c.fleet_id === f.fleet);
-  const activeJobs = (ctx?.jobs ?? []).filter((j) => j.status === 'ACTIVE');
+  // Removal / Setting / Fitment / Unsetting are made by the Tyre Changing panel, never as loose job codes
+  const activeJobs = (ctx?.jobs ?? []).filter((j) => j.status === 'ACTIVE' && !['JOB-008', 'JOB-009', 'JOB-010', 'JOB-011'].includes(j.job_code));
 
   async function create() {
     setBusy(true); setDialogError(null);
@@ -83,7 +86,7 @@ export function JobCards() {
   return (
     <div>
       <PageHeader title="Job Card Register" subtitle={canCreate ? 'Create job cards, assign inspection and work, and verify finished work.' : 'Monitor the job cards of your depot.'}
-        action={canCreate && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setF(blank); setDialogError(null); setCreating(true); }}><Plus size={16} /> New job card</button>} />
+        action={canCreate && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setF(blank); setTyreChange(false); setDialogError(null); setCreating(true); }}><Plus size={16} /> New job card</button>} />
       {error && <Banner kind="error">{error}</Banner>}
       <div className="mb-3 flex flex-wrap gap-3">{tileBtn('', 'All', counts.all)}{tileBtn('ONGOING', 'Ongoing', counts.ongoing)}{tileBtn('OVERDUE', 'Overdue', counts.overdue)}{tileBtn('COMPLETED', 'Completed', counts.done)}</div>
       <div className="relative mb-3 max-w-md">
@@ -120,14 +123,18 @@ export function JobCards() {
       {creating && ctx && (
         <Modal title={fromComplaint ? 'Create job card from complaint' : 'New job card'} onClose={closeForm}>
           {dialogError && <Banner kind="error">{dialogError}</Banner>}
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void create(); }}>
-            <div className="flex gap-2" role="group" aria-label="Job type">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Job type">
               {(['COMPLAINT', 'JOB_CODE'] as const).map((t) => (
-                <button type="button" key={t} disabled={!!fromComplaint} onClick={() => setF({ ...blank, type: t, fleet: f.fleet })}
-                  className={`rounded-full border px-3 py-1 text-sm ${f.type === t ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{TYPE_LABEL[t]}</button>
+                <button type="button" key={t} disabled={!!fromComplaint} onClick={() => { setTyreChange(false); setF({ ...blank, type: t, fleet: f.fleet }); }}
+                  className={`rounded-full border px-3 py-1 text-sm ${!tyreChange && f.type === t ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{TYPE_LABEL[t]}</button>
               ))}
+              <button type="button" disabled={!!fromComplaint} onClick={() => setTyreChange(true)}
+                className={`rounded-full border px-3 py-1 text-sm ${tyreChange ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>Tyre Changing</button>
               <span className="self-center text-xs text-slate-500">Schedule cards come from a Schedule ID.</span>
             </div>
+            {tyreChange && <TyreChangeForm ctx={ctx} onCancel={closeForm} onDone={(id) => nav(`${base}/job-cards/${id}`)} />}
+            {!tyreChange && <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void create(); }}>
             <Field label="Fleet *">
               <select className={inputCls} value={f.fleet ?? ''} disabled={!!fromComplaint} onChange={(e) => setF({ ...f, fleet: e.target.value || null, tyres: [], complaints: [], newComplaints: [] })} required={f.type === 'COMPLAINT'}>
                 <option value="">{f.type === 'JOB_CODE' ? 'No fleet (live stock)' : 'Select…'}</option>
@@ -182,7 +189,8 @@ export function JobCards() {
               <button type="button" className={btnPlain} onClick={closeForm} disabled={busy}>Cancel</button>
               <button type="submit" className={btnPrimary} disabled={busy}>{busy ? 'Working…' : 'Create (Draft)'}</button>
             </div>
-          </form>
+          </form>}
+          </div>
         </Modal>
       )}
     </div>
