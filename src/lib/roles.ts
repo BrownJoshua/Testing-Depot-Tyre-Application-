@@ -63,7 +63,6 @@ export const NAV: Record<RoleCode, NavItem[]> = {
   ],
   SUP: [
     { label: 'Grouping Approvals', arrives: 'Stage 5a', path: '/sup/grouping' },
-    { label: 'Roster Approvals', arrives: 'Stage 5a', path: '/sup/roster' },
     { label: 'Schedule Planner (monitor)', arrives: 'Stage 5a', path: '/sup/planner' },
     { label: 'GIN / Indent / Skill approvals', arrives: 'Stage 5b' },
     { label: 'Job Card Register (monitor)', arrives: 'Stage 5a', path: '/sup/job-cards' },
@@ -89,9 +88,9 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'My Jobs', arrives: 'Stage 6', path: '/tm' },
     { label: 'Duty & Shift', arrives: 'Stage 6', path: '/tm/duty' },
     { label: 'Raise complaint', arrives: 'Stage 6', path: '/tm/complaint' },
-    { label: 'My WSR', arrives: 'Stage 6' },
-    { label: 'GRN', arrives: 'Stage 6' },
-    { label: 'MRN', arrives: 'Stage 6' },
-    { label: 'SRN', arrives: 'Stage 6' },
+    { label: 'My WSR', arrives: 'Stage 6', path: '/tm/wsr' },
+    { label: 'GRN', arrives: 'Stage 6', path: '/tm/grn' },
+    { label: 'MRN', arrives: 'Stage 6', path: '/tm/mrn' },
+    { label: 'SRN', arrives: 'Stage 6', path: '/tm/srn' },
   ],
 };

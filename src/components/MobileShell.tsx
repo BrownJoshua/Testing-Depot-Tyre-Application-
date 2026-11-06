@@ -8,10 +8,10 @@ const TABS: { label: string; Icon: typeof ClipboardList; to?: string; end?: bool
   { label: 'My Jobs', Icon: ClipboardList, to: '/tm', end: true },
   { label: 'Duty & Shift', Icon: CalendarDays, to: '/tm/duty' },
   { label: 'Complaint', Icon: MessageSquareWarning, to: '/tm/complaint' },
-  { label: 'My WSR', Icon: PackagePlus },
-  { label: 'GRN', Icon: PackageCheck },
-  { label: 'MRN', Icon: Undo2 },
-  { label: 'SRN', Icon: Trash2 },
+  { label: 'My WSR', Icon: PackagePlus, to: '/tm/wsr' },
+  { label: 'GRN', Icon: PackageCheck, to: '/tm/grn' },
+  { label: 'MRN', Icon: Undo2, to: '/tm/mrn' },
+  { label: 'SRN', Icon: Trash2, to: '/tm/srn' },
 ];
 const LIVE = TABS.filter((t) => t.to);
 const LATER = TABS.filter((t) => !t.to);
@@ -50,10 +50,10 @@ export function MobileShell({ children }: { children: ReactNode }) {
           </button>
         </header>
         <main className="flex-1 p-4 pb-28">{children}</main>
-        <nav className="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
+        <nav className="fixed inset-x-0 bottom-0 flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
           {LIVE.map(({ label, Icon, to, end }) => (
             <NavLink key={label} to={to!} end={end}
-              className={({ isActive }) => `flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-xs font-medium ${isActive ? 'text-blue-700' : 'text-slate-600'}`}>
+              className={({ isActive }) => `flex min-h-14 min-w-[4.5rem] flex-1 flex-col items-center justify-center gap-1 py-2 text-xs font-medium ${isActive ? 'text-blue-700' : 'text-slate-600'}`}>
               <Icon size={22} />
               {label}
             </NavLink>

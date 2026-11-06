@@ -4,6 +4,8 @@ import { AlertTriangle } from 'lucide-react';
 import { completeJobId, daysBetween, loadJobs, startJobId, type JobsCtx, type Row } from '../../lib/jobs';
 import { Banner, btnPlain, btnPrimary } from '../../components/ui';
 import { CardBadge } from '../../components/OpsBits';
+import { createSrn } from '../../lib/stock';
+import { blankScrap, ScrapLines, type ScrapRow } from './TmStock';
 
 /** Tyre Man: My Jobs. Inspections assigned to him and the Job IDs assigned to him; the database returns only his own. */
 export function TmJobs() {
@@ -16,13 +18,24 @@ export function TmJobs() {
   const load = useCallback(() => { loadJobs().then(setCtx).catch((e: Error) => setError(e.message)); }, []);
   useEffect(load, [load]);
 
+  const [review, setReview] = useState<Row | null>(null);
+  const [scrapYes, setScrapYes] = useState<boolean | null>(null);
+  const [scrap, setScrap] = useState<ScrapRow[]>(blankScrap());
+
   async function act(job: Row, kind: 'start' | 'complete') {
     setBusy(job.id); setError(null); setNotice(null);
     try {
       if (kind === 'start') await startJobId(job.id); else await completeJobId(job.id, null);
-      setNotice(kind === 'start' ? `Work started on ${job.job_id_no}.` : `${job.job_id_no} completed.`); setConfirming(null); load();
+      // the review step of the last Job IDs of a card: scrap return available? (Scrap Return Note)
+      if (kind === 'complete' && review && scrapYes) {
+        const no = await createSrn(job.job_card_id, scrap.map((r) => ({ material: r.material, qty: Number(r.qty), unit: r.unit })), '');
+        setNotice(`${job.job_id_no} completed. ${no} created.`);
+      } else setNotice(kind === 'start' ? `Work started on ${job.job_id_no}.` : `${job.job_id_no} completed.`);
+      setConfirming(null); setReview(null); setScrapYes(null); setScrap(blankScrap()); load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
+  /** the last open Job ID of the card (of the ones this Tyre Man can see) asks the scrap question first */
+  const isLast = (j: Row) => !(ctx?.jobIds ?? []).some((x) => x.job_card_id === j.job_card_id && x.id !== j.id && !['DONE', 'CLOSED'].includes(x.status));
 
   const card = (id: string) => ctx?.cards.find((c) => c.id === id);
   const fleet = (cardId: string) => ctx?.fleets.find((f) => f.id === card(cardId)?.fleet_id);
@@ -70,9 +83,17 @@ export function TmJobs() {
             {j.rework_of && <p className="mt-2 text-xs font-semibold text-amber-700">Rework: the Tyre IC sent this back.</p>}
             <div className="mt-3 grid grid-cols-1 gap-3">
               {j.status === 'ASSIGNED' && <button className={`${btnPrimary} min-h-12 text-base`} disabled={busy === j.id} onClick={() => void act(j, 'start')}>Start Work</button>}
-              {j.status === 'STARTED' && (confirming === j.id
+              {j.status === 'STARTED' && review?.id === j.id && (
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                  <div className="text-sm font-semibold">Scrap return available?</div>
+                  <div className="grid grid-cols-2 gap-2"><button className={`${scrapYes === true ? btnPrimary : btnPlain} min-h-12`} onClick={() => setScrapYes(true)}>Yes</button><button className={`${scrapYes === false ? btnPrimary : btnPlain} min-h-12`} onClick={() => setScrapYes(false)}>No</button></div>
+                  {scrapYes && <ScrapLines rows={scrap} setRows={setScrap} />}
+                  <div className="grid grid-cols-2 gap-2"><button className={`${btnPlain} min-h-12`} onClick={() => setReview(null)}>Back</button>
+                    <button className={`${btnPrimary} min-h-12`} disabled={busy === j.id || scrapYes === null || (scrapYes && scrap.some((r) => !(Number(r.qty) > 0)))} onClick={() => void act(j, 'complete')}>Complete</button></div>
+                </div>)}
+              {j.status === 'STARTED' && review?.id !== j.id && (confirming === j.id
                 ? <button className={`${btnPrimary} min-h-12 text-base`} disabled={busy === j.id} onClick={() => void act(j, 'complete')}>Tap again to complete</button>
-                : <button className={`${btnPlain} min-h-12 text-base`} disabled={busy === j.id} onClick={() => setConfirming(j.id)}>Complete</button>)}
+                : <button className={`${btnPlain} min-h-12 text-base`} disabled={busy === j.id} onClick={() => (isLast(j) ? (setReview(j), setScrapYes(null)) : setConfirming(j.id))}>Complete</button>)}
             </div>
             <Link className="mt-3 block text-center text-sm font-medium text-blue-700 underline" to={`/tm/complaint?fleet=${fleet(j.job_card_id)?.id ?? ''}`}>Raise a complaint on this fleet</Link>
           </article>

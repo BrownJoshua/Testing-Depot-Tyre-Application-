@@ -9,7 +9,8 @@ import { MyRequests } from './pages/MyRequests';
 import { VendorForm } from './pages/VendorForm';
 import { VendorList } from './pages/VendorList';
 import { Complaints } from './pages/Complaints';
-import { DutyRoster } from './pages/DutyRoster';
+import { DutyPosting } from './pages/DutyPosting';
+import { TmGrn, TmMrn, TmSrn, TmWsr } from './pages/tm/TmStock';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { TyreRegister } from './pages/TyreRegister';
@@ -60,7 +61,6 @@ export default function App() {
           <Route path="planner" element={<SchedulePlanner />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
-          <Route path="roster" element={<DutyRoster />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
           <Route path="complaints" element={<Complaints />} />
@@ -79,7 +79,7 @@ export default function App() {
           <Route path="srn" element={<SrnPage />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
-          <Route path="duty" element={<DutyRoster />} />
+          <Route path="duty" element={<DutyPosting />} />
           <Route path="job-cards" element={<JobCards />} />
           <Route path="job-cards/:id" element={<JobCardDetail />} />
           <Route path="complaints" element={<Complaints />} />
@@ -95,6 +95,10 @@ export default function App() {
           <Route path="job-card/:id" element={<TmInspect />} />
           <Route path="duty" element={<TmDuty />} />
           <Route path="complaint" element={<TmComplaint />} />
+          <Route path="wsr" element={<TmWsr />} />
+          <Route path="grn" element={<TmGrn />} />
+          <Route path="mrn" element={<TmMrn />} />
+          <Route path="srn" element={<TmSrn />} />
           <Route path="*" element={<TmJobs />} />
         </Routes>
       </MobileShell></ProtectedRoute>} />

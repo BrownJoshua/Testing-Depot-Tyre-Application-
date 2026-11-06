@@ -106,7 +106,7 @@ export function WsrPage() {
   );
 }
 
-function NewWsrDlg({ ctx, busy, error, onCancel, onSave }: { ctx: StockCtx; busy: boolean; error: string | null; onCancel: () => void; onSave: (l: { part: string; size_id: string; job_card_id: string | null }[]) => void }) {
+export function NewWsrDlg({ ctx, busy, error, onCancel, onSave }: { ctx: StockCtx; busy: boolean; error: string | null; onCancel: () => void; onSave: (l: { part: string; size_id: string; job_card_id: string | null }[]) => void }) {
   const [lines, setLines] = useState<{ part: string; size_id: string; job_card_id: string }[]>([{ part: 'TYRE', size_id: '', job_card_id: '' }]);
   const upd = (i: number, p: Partial<(typeof lines)[0]>) => setLines(lines.map((l, k) => (k === i ? { ...l, ...p } : l)));
   return (
