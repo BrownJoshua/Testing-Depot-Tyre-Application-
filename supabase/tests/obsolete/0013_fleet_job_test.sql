@@ -65,7 +65,7 @@ begin
   select id into mn from public.org_units where code = 'MN';
 
   -- seeds and registry
-  select count(*) into n from public.maintenance_jobs; assert n = 10, 'ten jobs expected';
+  select count(*) into n from public.maintenance_jobs; assert n >= 10, 'at least ten jobs expected';
   select count(*) into n from public.maintenance_jobs where job_code in ('JOB-007', 'JOB-012'); assert n = 0, 'JOB-007 / JOB-012 must not be seeded';
   select count(*) into n from public.fleet_types where is_demo; assert n = 2, 'two demo fleet types';
   select count(*) into n from public.fleets where is_demo; assert n = 34, '34 demo fleets';

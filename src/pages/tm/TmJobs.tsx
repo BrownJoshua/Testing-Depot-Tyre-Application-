@@ -5,6 +5,7 @@ import { completeJobId, daysBetween, loadJobs, startJobId, type JobsCtx, type Ro
 import { Banner, btnPlain, btnPrimary } from '../../components/ui';
 import { CardBadge } from '../../components/OpsBits';
 import { createSrn } from '../../lib/stock';
+import { CHANGE_CODES, ROUND_CODES, ROUND_LABEL, STEP_LABEL } from '../../lib/rounds';
 import { blankScrap, ScrapLines, type ScrapRow } from './TmStock';
 
 /** Tyre Man: My Jobs. Inspections assigned to him and the Job IDs assigned to him; the database returns only his own. */
@@ -43,18 +44,38 @@ export function TmJobs() {
   const job = (j: Row) => ctx?.jobs.find((x) => x.id === j.job_code_id);
   const inspections = (ctx?.inspections ?? []).filter((i) => i.status === 'ASSIGNED');
   const all = ctx?.jobIds ?? [];
-  const todo = all.filter((j) => ['ASSIGNED', 'STARTED'].includes(j.status)).sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''));
+  const myOpen = all.filter((j) => ['ASSIGNED', 'STARTED'].includes(j.status));
+  const codeOf = (j: Row) => job(j)?.job_code as string;
+  const roundJobs = myOpen.filter((j) => (ROUND_CODES as readonly string[]).includes(codeOf(j)));
+  const changeJobs = myOpen.filter((j) => CHANGE_CODES.includes(codeOf(j)));
+  const todo = myOpen.filter((j) => !roundJobs.includes(j) && !changeJobs.includes(j)).sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''));
+  const statusOf = (js: Row[]) => (js.some((j) => j.on_hold) ? 'On hold' : js.some((j) => j.rework_of) ? 'Rework' : js.every((j) => j.status === 'ASSIGNED') ? 'Not started' : 'In progress');
+  const rounds = Object.entries(roundJobs.reduce<Record<string, Row[]>>((m, j) => { (m[codeOf(j)] ??= []).push(j); return m; }, {})).map(([code, js]) => ({ code, js, cards: [...new Set(js.map((j) => j.job_card_id))] }));
+  const changes = Object.entries(changeJobs.reduce<Record<string, Row[]>>((m, j) => { (m[j.job_card_id] ??= []).push(j); return m; }, {})).map(([cardId, js]) => ({ cardId, js }));
+  const [chip, setChip] = useState('All');
+  const show = (st: string) => chip === 'All' || chip === st;
   const waiting = all.filter((j) => j.status === 'DONE' && ['FINAL_INSPECTION', 'FINAL_INSPECTION_FAILED', 'ASSIGNED_FOR_WORK'].includes(card(j.job_card_id)?.status));
   const finished = all.filter((j) => (j.status === 'DONE' || j.status === 'CLOSED') && ['COMPLETED', 'CLOSED'].includes(card(j.job_card_id)?.status)).slice(0, 8);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900">My Jobs</h1>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-900">My Jobs <span className="text-sm font-normal text-slate-500">· {ctx?.today} Today</span></h1><Link to="/tm/notifications" aria-label="Notifications" className="rounded-lg border border-slate-300 px-3 py-2">🔔</Link></div>
+      <div className="grid grid-cols-2 gap-2"><Link to="/tm/wsr" className={`${btnPlain} min-h-12 text-center leading-8`}>📦 Request Material (WSR)</Link><Link to="/tm/complaint" className={`${btnPlain} min-h-12 text-center leading-8`}>⚠ Raise complaint</Link></div>
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">{['All', 'Not started', 'In progress', 'On hold', 'Rework', 'Done'].map((c) => <button key={c} role="tab" aria-selected={chip === c} onClick={() => setChip(c)} className={`whitespace-nowrap rounded-full border px-3 py-1 text-sm ${chip === c ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{c}</button>)}</div>
       {error && <Banner kind="error">{error}</Banner>}
       {notice && <Banner kind="ok">{notice}</Banner>}
       {!ctx && !error && <p className="text-slate-500">Loading…</p>}
-      {ctx && inspections.length + todo.length + waiting.length === 0 && <Banner kind="info">No jobs are assigned to you right now.</Banner>}
+      {ctx && inspections.length + todo.length + waiting.length + rounds.length + changes.length === 0 && <Banner kind="info">No jobs are assigned to you right now.</Banner>}
 
+      {chip !== 'Done' && rounds.filter((r) => show(statusOf(r.js))).map((r) => (
+        <Link key={r.code} to={`/tm/${r.code === 'JOB-004' || r.code === 'JOB-005' ? 'month' : 'round'}/${r.code}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div><div className="text-lg font-bold text-slate-900">{ROUND_LABEL[r.code]}</div><div className="text-sm text-slate-600">{r.cards.length} job card{r.cards.length === 1 ? '' : 's'} · one per fleet</div></div>
+          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">{statusOf(r.js)}</span></Link>))}
+      {chip !== 'Done' && changes.filter((c) => show(statusOf(c.js))).map((c) => (
+        <Link key={c.cardId} to={`/tm/work/${c.cardId}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div><div className="text-lg font-bold text-slate-900">{c.js.length === 1 && codeOf(c.js[0]) === 'JOB-010' ? 'Tyre Setting' : c.js.length === 1 && codeOf(c.js[0]) === 'JOB-011' ? 'Tyre Unsetting' : 'Tyre Changing'}</div>
+            <div className="text-sm text-slate-600">{card(c.cardId)?.job_card_no} · {fleet(c.cardId)?.fleet_no ?? 'No fleet'} · {[...new Set(c.js.map((j) => STEP_LABEL[codeOf(j)]))].join(', ')}</div></div>
+          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">{statusOf(c.js)}</span></Link>))}
       {inspections.length > 0 && <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Inspections ({inspections.length})</h2>}
       {inspections.map((i) => (
         <article key={i.id} className="rounded-xl border border-sky-300 bg-white p-4 shadow-sm">
@@ -69,7 +90,7 @@ export function TmJobs() {
       ))}
 
       {todo.length > 0 && <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Work to do ({todo.length})</h2>}
-      {todo.map((j) => {
+      {chip !== 'Done' && todo.filter((j) => show(statusOf([j]))).map((j) => {
         const overdue = j.due_date && daysBetween(j.due_date, ctx!.today) > 0;
         return (
           <article key={j.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -100,10 +121,10 @@ export function TmJobs() {
         );
       })}
 
-      {waiting.length > 0 && <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Waiting for the Tyre IC ({waiting.length})</h2>}
-      {waiting.map((j) => <div key={j.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-sm"><div><strong>{fleet(j.job_card_id)?.fleet_no}</strong> · {job(j)?.job_name}<div className="text-xs text-slate-500">{j.job_id_no}</div></div><CardBadge status="DONE" /></div>)}
-      {finished.length > 0 && <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Recently finished</h2>}
-      {finished.map((j) => <div key={j.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600"><div><strong>{fleet(j.job_card_id)?.fleet_no}</strong> · {job(j)?.job_name}<div className="text-xs">{j.job_id_no}</div></div><CardBadge status="COMPLETED" /></div>)}
+      {(chip === 'All' || chip === 'Done') && waiting.length > 0 && <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Waiting for the Tyre IC ({waiting.length})</h2>}
+      {(chip === 'All' || chip === 'Done') && waiting.map((j) => <div key={j.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-sm"><div><strong>{fleet(j.job_card_id)?.fleet_no}</strong> · {job(j)?.job_name}<div className="text-xs text-slate-500">{j.job_id_no}</div></div><CardBadge status="DONE" /></div>)}
+      {(chip === 'All' || chip === 'Done') && finished.length > 0 && <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Recently finished</h2>}
+      {(chip === 'All' || chip === 'Done') && finished.map((j) => <div key={j.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600"><div><strong>{fleet(j.job_card_id)?.fleet_no}</strong> · {job(j)?.job_name}<div className="text-xs">{j.job_id_no}</div></div><CardBadge status="COMPLETED" /></div>)}
     </div>
   );
 }

@@ -129,10 +129,12 @@ export function MasterForm() {
                         <option value="">{fd.required ? 'Select…' : '— none —'}</option>
                         {fd.options!(ctx, f).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
+                    ) : fd.multiline ? (
+                      <textarea className={inputCls} rows={4} disabled={locked} value={(f[fd.key] as string) ?? ''} onChange={(e) => set(fd.key, e.target.value)} />
                     ) : (
                       <input className={inputCls} disabled={locked} type={fd.kind === 'number' ? 'number' : fd.kind === 'date' ? 'date' : 'text'} step="any"
                         value={(f[fd.key] as string | number | null) ?? ''}
-                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') && fd.key !== 'chassis_no' || fd.key === 'size_code' || fd.key === 'job_code' || fd.key === 'complaint_code' || fd.key === 'schedule_code' ? e.target.value.toUpperCase() : e.target.value)} />
+                        onChange={(e) => set(fd.key, fd.key.endsWith('_no') && fd.key !== 'chassis_no' || fd.key === 'size_code' || fd.key === 'job_code' || fd.key === 'complaint_code' || fd.key === 'schedule_code' || fd.key === 'shift_code' || fd.key === 'reason_code' || fd.key === 'pattern_code' || fd.key === 'qc_code' ? e.target.value.toUpperCase() : e.target.value)} />
                     )}
                   </Field>
                 </div>

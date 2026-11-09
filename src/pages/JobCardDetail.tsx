@@ -38,6 +38,7 @@ export function JobCardDetail() {
 
   const card = ctx?.cards.find((c) => c.id === id);
   const fleet = ctx?.fleets.find((f) => f.id === card?.fleet_id);
+  const fleet2 = ctx?.fleets.find((f) => f.id === card?.fleet2_id);
   const complaints = (ctx?.complaints ?? []).filter((c) => c.job_card_id === id);
   const inspections = (ctx?.inspections ?? []).filter((i) => i.job_card_id === id);
   const jobIds = (ctx?.jobIds ?? []).filter((j) => j.job_card_id === id);
@@ -75,7 +76,7 @@ export function JobCardDetail() {
 
       <section className={`${cardCls} grid grid-cols-2 gap-x-6 gap-y-2 p-4 text-sm sm:grid-cols-4`}>
         {([
-          ['Fleet Number', fleet?.fleet_no ?? 'No fleet'], ['Register Number', fleet?.registration_no ?? '—'],
+          ['Fleet Number', [fleet?.fleet_no ?? 'No fleet', fleet2?.fleet_no].filter(Boolean).join(' + ')], ['Register Number', [fleet?.registration_no ?? '—', fleet2?.registration_no].filter(Boolean).join(' + ')],
           ['Expected Done', <>{card.expected_date}{card.expected_shift_id ? ` · ${shiftName(card.expected_shift_id)}` : ''}{overdue > 0 && <span className="font-semibold text-red-700"> · Overdue {overdue}d</span>}</>],
           ['Estimated Time', card.estimated_minutes ? fmtMinutes(card.estimated_minutes) : '—'], ['Assignment', technicians], ['Vehicle Source', card.vehicle_source],
           ['Job Type', TYPE_LABEL[card.job_type]], ['Created', `${who(card.created_by)} · ${fmtDateTime(card.created_at)}`],
@@ -186,8 +187,8 @@ export function JobCardDetail() {
   );
 }
 
-function Actions({ busy, onCancel, label }: { busy: boolean; onCancel: () => void; label: string }) {
-  return <div className="flex justify-end gap-2"><button type="button" className={btnPlain} onClick={onCancel} disabled={busy}>Cancel</button><button type="submit" className={btnPrimary} disabled={busy}>{busy ? 'Working…' : label}</button></div>;
+function Actions({ busy, disabled, onCancel, label }: { busy: boolean; disabled?: boolean; onCancel: () => void; label: string }) {
+  return <div className="flex justify-end gap-2"><button type="button" className={btnPlain} onClick={onCancel} disabled={busy}>Cancel</button><button type="submit" className={btnPrimary} disabled={busy || disabled}>{busy ? 'Working…' : label}</button></div>;
 }
 
 function AssignInspectionDlg({ ctx, card, busy, error, onCancel, onSave }: { ctx: JobsCtx; card: Row; busy: boolean; error: string | null; onCancel: () => void;
@@ -241,7 +242,7 @@ function AssignWorkDlg({ ctx, card, jobs, busy, error, onCancel, onSave }: { ctx
             </div></fieldset>
         )}
         <Field label="Remarks"><textarea className={inputCls} rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></Field>
-        <Actions busy={busy || emps.length === 0} onCancel={onCancel} label="Assign" />
+        <Actions busy={busy} disabled={emps.length === 0} onCancel={onCancel} label="Assign" />
       </form>
     </Modal>
   );
@@ -255,7 +256,7 @@ export function InspectDlg({ ctx, card, ins, complaints, busy, error, onCancel, 
   const [remarks, setRemarks] = useState('');
   const active = ctx.jobs.filter((j) => j.status === 'ACTIVE');
   const tyres = ctx.tyres.filter((t) => t.fleet_id === card.fleet_id && t.stock_place === 'FITTED').sort((a, b) => a.fitted_position.localeCompare(b.fitted_position));
-  const ready = complaints.every((c) => d[c.id]?.approve !== null);
+  const ready = complaints.every((c) => d[c.id]?.approve !== null && (d[c.id].approve !== true || d[c.id].codes.length > 0));
   const set = (id: string, patch: Partial<D>) => setD({ ...d, [id]: { ...d[id], ...patch } });
   return (
     <Modal title={`Inspection ${ins.inspection_no}`} onClose={onCancel}>
@@ -298,7 +299,7 @@ export function InspectDlg({ ctx, card, ins, complaints, busy, error, onCancel, 
             <button type="button" className={`${btnPlain} inline-flex items-center gap-1`} onClick={() => setFound([...found, { tyre_id: '', type: '', remarks: '', codes: [] }])}><Plus size={14} /> Add complaint</button>
           </div></fieldset>
         <Field label="Inspection remarks"><textarea className={inputCls} rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></Field>
-        <Actions busy={busy || !ready} onCancel={onCancel} label="Save inspection" />
+        <Actions busy={busy} disabled={!ready} onCancel={onCancel} label="Save inspection" />
       </form>
     </Modal>
   );
@@ -321,7 +322,7 @@ function FinalDlg({ jobs, jobOf, tyreLabel, busy, error, onCancel, onSave }: { j
           <fieldset><legend className="mb-1 text-sm font-medium text-slate-700">Job IDs to redo * (a new Job ID is made for each)</legend>
             <div className="space-y-1 rounded-lg border border-slate-200 p-2 text-sm">{jobs.map((j) => <label key={j.id} className="flex items-center gap-1.5"><input type="checkbox" checked={pick.includes(j.id)} onChange={() => setPick(toggle(pick, j.id))} /> {j.job_id_no} · {jobOf(j)?.job_name} · {tyreLabel(j.tyre_id)}</label>)}</div></fieldset>
         )}
-        <Actions busy={busy || (result === 'REWORK' && pick.length === 0)} onCancel={onCancel} label="Save" />
+        <Actions busy={busy} disabled={result === 'REWORK' && pick.length === 0} onCancel={onCancel} label="Save" />
       </form>
     </Modal>
   );

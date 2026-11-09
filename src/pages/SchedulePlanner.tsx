@@ -5,6 +5,7 @@ import { addDaysIso } from '../lib/ops';
 import { assignTechnician, createRun, frequencyText, loadChart, loadPlanner, moveItem, STATE_LABEL, STATE_STYLE, type PlannerCtx, type Row } from '../lib/schedules';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader } from '../components/ui';
 import { Modal } from '../components/OpsBits';
+import { ScheduledWork } from '../components/ScheduledWork';
 
 const PAGE = 10;
 const StateBadge = ({ s }: { s: string }) => <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATE_STYLE[s]}`}>{STATE_LABEL[s]}</span>;
@@ -59,6 +60,7 @@ export function SchedulePlanner() {
       {notice && <Banner kind="ok">{notice}</Banner>}
       {!ctx && !error && <p className="text-slate-500">Loading…</p>}
 
+      {ctx && <ScheduledWork key={ctx.runs.length} today={ctx.today} />}
       {ctx && (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Schedule Setup</h2>

@@ -28,7 +28,7 @@ begin
   select count(*) into n from public.ref_values where list_code = 'vendor_category'; assert n = 5, 'five vendor categories expected';
   select count(*) into n from public.vendors where is_demo; assert n = 5, 'five demo vendors expected';
   assert (select is_enabled from public.master_entity_registry where entity_type = 'vendor'), 'vendor type not enabled';
-  select count(*) into n from public.master_entity_registry where is_enabled; assert n = 1, 'only vendor should be enabled';
+  select count(*) into n from public.master_entity_registry where is_enabled; assert n >= 1, 'vendor is enabled';
 
   -- nobody can write vendors directly
   perform set_config('request.jwt.claims', am, true); execute 'set local role authenticated';

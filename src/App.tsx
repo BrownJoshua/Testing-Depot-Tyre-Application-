@@ -4,6 +4,7 @@ import { MobileShell } from './components/MobileShell';
 import { ProtectedRoute, RootRedirect } from './components/ProtectedRoute';
 import { RoleHome } from './components/RoleHome';
 import { Login } from './pages/Login';
+import { AllocationRequests, MaintenancePending, PurchaseIndent } from './pages/HoPurchase';
 import { ApprovalInbox } from './pages/ApprovalInbox';
 import { MyRequests } from './pages/MyRequests';
 import { VendorForm } from './pages/VendorForm';
@@ -11,6 +12,9 @@ import { VendorList } from './pages/VendorList';
 import { Complaints } from './pages/Complaints';
 import { DutyPosting } from './pages/DutyPosting';
 import { TmGrn, TmMrn, TmSrn, TmWsr } from './pages/tm/TmStock';
+import { TmMonth, TmNorms, TmNotifications, TmRound } from './pages/tm/TmRounds';
+import { TmFleet } from './pages/tm/TmFleet';
+import { TmWork } from './pages/tm/TmWork';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { TyreRegister } from './pages/TyreRegister';
@@ -18,6 +22,9 @@ import { Dashboard } from './pages/Dashboard';
 import { Reports } from './pages/Reports';
 import { SchedulePlanner } from './pages/SchedulePlanner';
 import { ReturnGrnPage, SrnPage, WsrPage } from './pages/StockDocs';
+import { DepotIndentPage, GatePassPage, GinPage, GrnInPage, StockApprovalsPage, TransferRequestPage } from './pages/Logistics';
+import { OutsourceEmployees, TyreManRegister } from './pages/StaffRegisters';
+import { LiveStock } from './pages/LiveStock';
 import { TmComplaint } from './pages/tm/TmComplaint';
 import { TmDuty } from './pages/tm/TmDuty';
 import { TmInspect } from './pages/tm/TmInspect';
@@ -42,6 +49,9 @@ export default function App() {
           <Route path="vendors/new" element={<VendorForm />} />
           <Route path="vendors/:id/edit" element={<VendorForm />} />
           <Route path="requests" element={<MyRequests />} />
+          <Route path="purchase-indent" element={<PurchaseIndent />} />
+          <Route path="allocation-requests" element={<AllocationRequests />} />
+          <Route path="maintenance-pending" element={<MaintenancePending />} />
           <Route path="m/:slug" element={<MasterList />} />
           <Route path="m/:slug/new" element={<MasterForm />} />
           <Route path="m/:slug/:id/edit" element={<MasterForm />} />
@@ -55,6 +65,9 @@ export default function App() {
           <Route path="reports" element={<Reports />} />
           <Route index element={<RoleHome />} />
           <Route path="approvals" element={<ApprovalInbox mode="pending" />} />
+          <Route path="purchase-indent" element={<PurchaseIndent />} />
+          <Route path="allocation-requests" element={<AllocationRequests />} />
+          <Route path="maintenance-pending" element={<MaintenancePending />} />
           <Route path="history" element={<ApprovalInbox mode="history" />} />
           <Route path="vendors" element={<VendorList />} />
           <Route path="m/:slug" element={<MasterList />} />
@@ -63,6 +76,7 @@ export default function App() {
       </AppShell></ProtectedRoute>} />
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
+          <Route path="stock-approvals" element={<StockApprovalsPage />} />
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="reports" element={<Reports />} />
@@ -84,7 +98,16 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="reports" element={<Reports />} />
           <Route path="planner" element={<SchedulePlanner />} />
-          <Route path="wsr" element={<WsrPage />} />
+          <Route path="live-stock" element={<LiveStock />} />
+          <Route path="outsource" element={<OutsourceEmployees />} />
+          <Route path="tyre-men" element={<TyreManRegister />} />
+          <Route path="wsr" element={<WsrPage only="wsr" />} />
+          <Route path="wsr-gin" element={<WsrPage only="gin" />} />
+          <Route path="indent" element={<DepotIndentPage />} />
+          <Route path="transfer-requests" element={<TransferRequestPage />} />
+          <Route path="gin" element={<GinPage />} />
+          <Route path="gate-pass" element={<GatePassPage />} />
+          <Route path="grn" element={<GrnInPage />} />
           <Route path="material-return" element={<ReturnGrnPage />} />
           <Route path="srn" element={<SrnPage />} />
           <Route index element={<RoleHome />} />
@@ -109,6 +132,12 @@ export default function App() {
           <Route path="grn" element={<TmGrn />} />
           <Route path="mrn" element={<TmMrn />} />
           <Route path="srn" element={<TmSrn />} />
+          <Route path="round/:code" element={<TmRound />} />
+          <Route path="month/:code" element={<TmMonth />} />
+          <Route path="fleet/:cardId" element={<TmFleet />} />
+          <Route path="work/:cardId" element={<TmWork />} />
+          <Route path="norms" element={<TmNorms />} />
+          <Route path="notifications" element={<TmNotifications />} />
           <Route path="*" element={<TmJobs />} />
         </Routes>
       </MobileShell></ProtectedRoute>} />

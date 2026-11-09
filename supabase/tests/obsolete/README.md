@@ -1,0 +1,2 @@
+0014 and 0015 describe the batch 6-8 job, planner and roster design that migrations 0019, 0022 and 0024 replaced; the D1 behaviour is covered by 0019_0020, 0022, 0023, 0024 and 0025.
+0012 and 0013 assert the batch 4-6 seed counts (sizes, makes, folios, 10 jobs, 34 demo fleets) that the D1 opening data in 0018 and 0019 replaced; tyre, fleet and job master behaviour is exercised by 0017_0018, 0019_0020 and 0022.

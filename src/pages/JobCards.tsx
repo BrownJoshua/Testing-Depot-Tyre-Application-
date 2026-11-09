@@ -22,6 +22,7 @@ export function JobCards() {
   const [error, setError] = useState<string | null>(null);
   const [tile, setTile] = useState<Tile>('');
   const [q, setQ] = useState('');
+  const [flt, setFlt] = useState({ from: '', to: '', cat: '', src: '', status: '', shift: '', when: '' });
   const [creating, setCreating] = useState(false);
   const [tyreChange, setTyreChange] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,6 +56,16 @@ export function JobCards() {
       if (tile === 'ONGOING' && !ONGOING.includes(c.status)) return false;
       if (tile === 'OVERDUE' && !(!CLOSED.includes(c.status) && daysBetween(c.expected_date, ctx.today) > 0)) return false;
       if (tile === 'COMPLETED' && !CLOSED.includes(c.status)) return false;
+      if (flt.from && c.expected_date < flt.from) return false;
+      if (flt.to && c.expected_date > flt.to) return false;
+      if (flt.src && c.job_type !== flt.src) return false;
+      if (flt.status && c.status !== flt.status) return false;
+      if (flt.shift && c.expected_shift_id !== flt.shift) return false;
+      if (flt.cat && !ctx.jobIds.some((j) => j.job_card_id === c.id && j.job_code_id === flt.cat)) return false;
+      const dd = daysBetween(c.expected_date, ctx.today);
+      if (flt.when === 'OVERDUE' && !(dd > 0 && !CLOSED.includes(c.status))) return false;
+      if (flt.when === 'TODAY' && dd !== 0) return false;
+      if (flt.when === 'UPCOMING' && dd >= 0) return false;
       if (!t) return true;
       const fl = fleet(c.fleet_id);
       const jobs = ctx.jobIds.filter((j) => j.job_card_id === c.id);
@@ -63,7 +74,7 @@ export function JobCards() {
       return hay.includes(t);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, tile, q]);
+  }, [ctx, tile, q, flt]);
 
   const fleetTyres = (ctx?.tyres ?? []).filter((t) => f.fleet && t.fleet_id === f.fleet && t.stock_place === 'FITTED').sort((a, b) => a.fitted_position.localeCompare(b.fitted_position));
   const newOnes = (ctx?.complaints ?? []).filter((c) => c.state === 'NEW' && c.fleet_id === f.fleet);
@@ -73,6 +84,13 @@ export function JobCards() {
   async function create() {
     setBusy(true); setDialogError(null);
     try { const id = await createCard(f); nav(`${base}/job-cards/${id}`); } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
+  }
+  function exportCsv() {
+    const head = ['Job Card Number', 'Fleet', 'Type', 'Status', 'Expected date', 'Job IDs', 'Technicians'];
+    const q2 = (v: unknown) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const lines = rows.map((c) => [c.job_card_no, fleet(c.fleet_id)?.fleet_no ?? '', TYPE_LABEL[c.job_type], JC_STATUS_LABEL[c.status], c.expected_date, ctx!.jobIds.filter((j) => j.job_card_id === c.id).length, techs(c.id).join('; ')].map(q2).join(','));
+    const url = URL.createObjectURL(new Blob(['﻿' + [head.map(q2).join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'job-cards.csv'; a.click(); URL.revokeObjectURL(url);
   }
   function closeForm() { setCreating(false); if (fromComplaint) setParams({}); }
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -93,6 +111,17 @@ export function JobCards() {
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input className={`${inputCls} pl-9`} placeholder="Job card, fleet, register no, tyre no, Job ID, complaint, employee, status" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
       </div>
+      {ctx && <div className="mb-3 flex flex-wrap items-end gap-3 text-sm">
+        <label>From <input type="date" className={`${inputCls} w-40`} value={flt.from} onChange={(e) => setFlt({ ...flt, from: e.target.value })} /></label>
+        <label>To <input type="date" className={`${inputCls} w-40`} value={flt.to} onChange={(e) => setFlt({ ...flt, to: e.target.value })} /></label>
+        <label>Work category <select className={`${inputCls} w-48`} value={flt.cat} onChange={(e) => setFlt({ ...flt, cat: e.target.value })}><option value="">All types</option>{ctx.jobs.filter((j) => j.status === 'ACTIVE').map((j) => <option key={j.id} value={j.id}>{j.job_name}</option>)}</select></label>
+        <label>Source <select className={`${inputCls} w-36`} value={flt.src} onChange={(e) => setFlt({ ...flt, src: e.target.value })}><option value="">All sources</option><option value="SCHEDULE">Scheduled</option><option value="COMPLAINT">Complaint</option><option value="JOB_CODE">Reactive</option></select></label>
+        <label>Shift <select className={`${inputCls} w-36`} value={flt.shift} onChange={(e) => setFlt({ ...flt, shift: e.target.value })}><option value="">All shifts</option>{ctx.shifts.map((x) => <option key={x.id} value={x.id}>{x.shift_name}</option>)}</select></label>
+        <label>Status <select className={`${inputCls} w-48`} value={flt.status} onChange={(e) => setFlt({ ...flt, status: e.target.value })}><option value="">All statuses</option>{Object.entries(JC_STATUS_LABEL).filter(([k]) => ['DRAFT','ASSIGNED_FOR_INSPECTION','INSPECTION_DONE','ASSIGNED_FOR_WORK','FINAL_INSPECTION','FINAL_INSPECTION_FAILED','COMPLETED','CLOSED'].includes(k)).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <span className="flex gap-1">{([['', 'All'], ['OVERDUE', 'Overdue'], ['TODAY', 'Today'], ['UPCOMING', 'Upcoming']] as const).map(([k, l]) => <button key={k} onClick={() => setFlt({ ...flt, when: k })} className={`rounded-full border px-3 py-1 ${flt.when === k ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{l}</button>)}</span>
+        <button className={btnPlain} onClick={() => setFlt({ from: '', to: '', cat: '', src: '', status: '', shift: '', when: '' })}>Reset</button>
+        <button className={btnPlain} onClick={exportCsv}>Export CSV</button>
+      </div>}
       <div className={`${cardCls} overflow-x-auto`}>
         <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -108,7 +137,7 @@ export function JobCards() {
               return (
                 <tr key={c.id} className="border-t border-slate-100 align-top">
                   <td className="px-4 py-2 font-medium"><Link className="text-blue-700 underline" to={`${base}/job-cards/${c.id}`}>{c.job_card_no}</Link><div className="text-xs font-normal text-slate-500">{TYPE_LABEL[c.job_type]}</div></td>
-                  <td className="px-4 py-2">{fleet(c.fleet_id)?.fleet_no ?? 'No fleet'}<div className="text-xs text-slate-500">{fleet(c.fleet_id)?.registration_no}</div></td>
+                  <td className="px-4 py-2">{fleet(c.fleet_id)?.fleet_no ?? 'No fleet'}{c.fleet2_id && ` + ${fleet(c.fleet2_id)?.fleet_no}`}<div className="text-xs text-slate-500">{fleet(c.fleet_id)?.registration_no}</div></td>
                   <td className="px-4 py-2">{codes.length ? codes.join(', ') : c.job_type === 'COMPLAINT' ? 'Complaint (awaiting inspection)' : '—'}<div className="text-xs text-slate-500">{jobs.length} Job ID{jobs.length === 1 ? '' : 's'}</div></td>
                   <td className="px-4 py-2 text-slate-700">{techs(c.id).join(', ') || '—'}</td>
                   <td className="px-4 py-2"><CardBadge status={c.status} /><div className="mt-1 text-xs text-slate-500">Due {c.expected_date}{od > 0 && <span className="font-semibold text-red-700"> · Overdue {od}d</span>}</div></td>

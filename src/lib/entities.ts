@@ -12,6 +12,7 @@ export interface Ctx {
   folioLocs: Record<string, string[]>;
   fleetTypes: Row[]; fleetTypeSizes: Record<string, string[]>; fleets: Row[]; depots: Row[]; jobs: Row[];
   complaintTypes: Row[]; complaintJobs: Record<string, string[]>; schedules: Row[];
+  shifts: Row[]; rejectReasons: Row[]; wearPatterns: Row[]; qcChecklists: Row[]; expectedLife: Row[];
 }
 
 async function all(table: string, order: string): Promise<Row[]> {
@@ -21,12 +22,13 @@ async function all(table: string, order: string): Promise<Row[]> {
 }
 
 export async function loadCtx(): Promise<Ctx> {
-  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs, schedules] = await Promise.all([
+  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife] = await Promise.all([
     all('vendors', 'vendor_code'), all('ref_values', 'sort_order'), all('tyre_sizes', 'size_code'), all('tyre_makes', 'name'),
     all('tyre_models', 'model_name'), all('tyre_folios', 'folio_no'), all('tyre_folio_locations', 'location_type'),
     all('fleet_types', 'fleet_make'), all('fleet_type_tyre_sizes', 'tyre_size_id'), all('fleets', 'fleet_no'),
     all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'), all('complaint_types', 'complaint_code'), all('complaint_type_jobs', 'job_id'),
-    all('maintenance_schedules', 'schedule_code'),
+    all('maintenance_schedules', 'schedule_code'), all('shifts', 'start_time'), all('reject_reasons', 'reason_code'), all('wear_patterns', 'pattern_code'),
+    all('qc_checklists', 'qc_code'), all('expected_life_km', 'created_at'),
   ]);
   const complaintJobs: Record<string, string[]> = {};
   for (const l of ctJobs) (complaintJobs[l.complaint_type_id] ??= []).push(jobs.find((j) => j.id === l.job_id)?.job_code ?? '');
@@ -35,14 +37,14 @@ export async function loadCtx(): Promise<Ctx> {
   const fleetTypeSizes: Record<string, string[]> = {};
   for (const l of ftSizes) (fleetTypeSizes[l.fleet_type_id] ??= []).push(sizes.find((x) => x.id === l.tyre_size_id)?.size_code ?? '');
   const depots = orgs.filter((o) => o.unit_type === 'DEPOT');
-  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs, schedules };
+  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife };
 }
 
 export interface Option { value: string; label: string }
 export interface FieldDef {
   key: string; label: string; kind: 'text' | 'number' | 'date' | 'bool' | 'select' | 'multi';
   /** only chosen when the record is created */
-  createOnly?: boolean; required?: boolean; hint?: string; wide?: boolean;
+  createOnly?: boolean; required?: boolean; hint?: string; wide?: boolean; multiline?: boolean;
   options?: (ctx: Ctx, form: Row) => Option[];
 }
 export interface EntityDef {
@@ -280,6 +282,72 @@ export const ENTITIES: EntityDef[] = [
       { label: 'Effective from', value: (r) => r.effective_from },
     ],
     nameOf: (f) => `${f.schedule_code ?? ''} ${f.schedule_name ?? ''}`.trim() || 'schedule',
+  },
+  {
+    type: 'reject_reason', slug: 'reject-reasons', title: 'Reject Reason Master', singular: 'reject reason',
+    fields: [
+      { key: 'reason_code', label: 'Reason ID', kind: 'text', createOnly: true, required: true, hint: 'e.g. DRR-007' },
+      { key: 'reason_text', label: 'Reject reason', kind: 'text', required: true, wide: true },
+    ],
+    rows: (c) => c.rejectReasons,
+    toForm: (r) => ({ reason_code: r.reason_code, reason_text: r.reason_text }),
+    columns: [{ label: 'Reason ID', value: (r) => r.reason_code }, { label: 'Reject reason', value: (r) => r.reason_text }],
+    nameOf: (f) => `${f.reason_code ?? ''} ${f.reason_text ?? ''}`.trim() || 'reject reason',
+  },
+  {
+    type: 'wear_pattern', slug: 'wear-patterns', title: 'Wear Pattern Master', singular: 'wear pattern',
+    fields: [
+      { key: 'pattern_code', label: 'Pattern ID', kind: 'text', createOnly: true, required: true, hint: 'e.g. WP-011' },
+      { key: 'pattern_name', label: 'Wear pattern', kind: 'text', required: true },
+    ],
+    rows: (c) => c.wearPatterns,
+    toForm: (r) => ({ pattern_code: r.pattern_code, pattern_name: r.pattern_name }),
+    columns: [{ label: 'Pattern ID', value: (r) => r.pattern_code }, { label: 'Wear pattern', value: (r) => r.pattern_name }],
+    nameOf: (f) => `${f.pattern_code ?? ''} ${f.pattern_name ?? ''}`.trim() || 'wear pattern',
+  },
+  {
+    type: 'qc_checklist', slug: 'qc-master', title: 'QC Master', singular: 'QC checklist',
+    fields: [
+      { key: 'qc_code', label: 'QC ID', kind: 'text', createOnly: true, required: true, hint: 'e.g. QCM-012' },
+      { key: 'job_type', label: 'Job type', kind: 'text', required: true },
+      { key: 'checklist_items', label: 'Checklist items', kind: 'text', required: true, wide: true, multiline: true, hint: 'one item on each line' },
+    ],
+    rows: (c) => c.qcChecklists,
+    toForm: (r) => ({ qc_code: r.qc_code, job_type: r.job_type, checklist_items: (r.checklist_items ?? []).join('\n') }),
+    columns: [{ label: 'QC ID', value: (r) => r.qc_code }, { label: 'Job type', value: (r) => r.job_type }, { label: 'Checklist items', value: (r) => String((r.checklist_items ?? []).length) }],
+    nameOf: (f) => `${f.qc_code ?? ''} ${f.job_type ?? ''}`.trim() || 'QC checklist',
+  },
+  {
+    type: 'expected_life_km', slug: 'expected-life-km', title: 'Expected Life KM', singular: 'expected life row',
+    fields: [
+      { key: 'size_code', label: 'Tyre size', kind: 'select', createOnly: true, required: true, options: sizeOpts },
+      { key: 'km_new', label: 'New', kind: 'number', required: true },
+      { key: 'km_rt1', label: 'RT1', kind: 'number', required: true },
+      { key: 'km_rt2', label: 'RT2', kind: 'number', required: true },
+      { key: 'km_rt3', label: 'RT3', kind: 'number', required: true },
+      { key: 'km_rt4', label: 'RT4', kind: 'number', required: true },
+      { key: 'km_rt5', label: 'RT5', kind: 'number', required: true },
+    ],
+    rows: (c) => c.expectedLife,
+    toForm: (r, c) => ({ size_code: c.sizes.find((s) => s.id === r.tyre_size_id)?.size_code ?? '', km_new: r.km_new, km_rt1: r.km_rt1, km_rt2: r.km_rt2, km_rt3: r.km_rt3, km_rt4: r.km_rt4, km_rt5: r.km_rt5 }),
+    columns: [
+      { label: 'Tyre size', value: (r, c) => c.sizes.find((s) => s.id === r.tyre_size_id)?.size_code ?? '—' },
+      ...(['km_new', 'km_rt1', 'km_rt2', 'km_rt3', 'km_rt4', 'km_rt5'] as const).map((k) => ({ label: k === 'km_new' ? 'New' : k.slice(3).toUpperCase(), value: (r: Row) => Number(r[k]).toLocaleString('en-IN') })),
+    ],
+    nameOf: (f) => String(f.size_code ?? 'tyre size'),
+  },
+  {
+    type: 'shift', slug: 'shifts', title: 'Shift Master', singular: 'shift',
+    fields: [
+      { key: 'shift_code', label: 'Shift code', kind: 'text', createOnly: true, required: true, hint: 'capital letters, e.g. SPLIT' },
+      { key: 'shift_name', label: 'Shift', kind: 'text', required: true },
+      { key: 'start_time', label: 'Start (HH:MM)', kind: 'text', required: true },
+      { key: 'end_time', label: 'End (HH:MM)', kind: 'text', required: true },
+    ],
+    rows: (c) => c.shifts,
+    toForm: (r) => ({ shift_code: r.shift_code, shift_name: r.shift_name, start_time: String(r.start_time).slice(0, 5), end_time: String(r.end_time).slice(0, 5) }),
+    columns: [{ label: 'Shift', value: (r) => r.shift_name }, { label: 'Start', value: (r) => String(r.start_time).slice(0, 5) }, { label: 'End', value: (r) => String(r.end_time).slice(0, 5) }],
+    nameOf: (f) => String(f.shift_name ?? 'shift'),
   },
 ];
 

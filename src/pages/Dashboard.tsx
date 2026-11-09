@@ -5,24 +5,27 @@ import { supabase } from '../lib/supabase';
 import { all, rpc, type Row } from '../lib/ops';
 import { daysBetween, ONGOING } from '../lib/jobs';
 import { Banner, cardCls, PageHeader } from '../components/ui';
+import { DepotAnalytics } from '../components/DepotAnalytics';
 
 interface Data {
   cards: Row[]; complaints: Row[]; tyres: Row[]; depots: Row[]; chart: Row[]; today: string;
-  wsrs: Row[]; mrns: Row[]; srns: Row[]; requests: Row[]; groups: Row[];
+  wsrs: Row[]; mrns: Row[]; srns: Row[]; requests: Row[]; groups: Row[]; fleets: Row[]; items: Row[]; ctypes: Row[]; folios: Row[]; sizes: Row[];
 }
 const CLOSED = ['COMPLETED', 'CLOSED'];
 const PLACE: Record<string, string> = { FITTED: 'Fitted', LIVE_STOCK: 'Live stock', AT_TRS: 'At TRS', AT_MIC: 'At MIC', AT_OTHER_DEPOT: 'Other depot', CENTRAL_STORE: 'Central Store', IN_TRANSIT: 'In transit', SCRAPPED: 'Scrapped' };
 
 async function load(): Promise<Data> {
   const q = (t: string) => supabase.from(t).select('*').range(0, 4999).then((r) => { if (r.error) throw new Error(r.error.message); return (r.data ?? []) as Row[]; });
-  const [cards, complaints, tyres, depots, chart, wsrs, mrns, srns, requests, groups, today] = await Promise.all([
+  const [cards, complaints, tyres, depots, chart, wsrs, mrns, srns, requests, groups, fleets, items, ctypes, folios, sizes, today] = await Promise.all([
     all('job_cards', 'created_at', false), all('complaints', 'raised_at', false), q('tyres'), all('org_units', 'code'), q('v_schedule_chart'),
     all('wsrs', 'created_at', false), all('mrns', 'created_at', false), all('srns', 'created_at', false),
     supabase.from('master_change_requests').select('id, status').eq('status', 'PENDING_APPROVAL').then((r) => (r.data ?? []) as Row[]),
     supabase.from('fleet_group_revisions').select('id, status').eq('status', 'PENDING_APPROVAL').then((r) => (r.data ?? []) as Row[]),
+    supabase.from('fleets').select('id, status, org_unit_id').range(0, 4999).then((r) => (r.data ?? []) as Row[]), q('stock_items'),
+    all('complaint_types', 'complaint_code'), all('tyre_folios', 'folio_no'), all('tyre_sizes', 'size_code'),
     rpc<string>('get_business_today', {}),
   ]);
-  return { cards, complaints, tyres, depots, chart, today, wsrs, mrns, srns, requests, groups };
+  return { cards, complaints, tyres, depots, chart, today, wsrs, mrns, srns, requests, groups, fleets, items, ctypes, folios, sizes };
 }
 
 const Tile = ({ label, value, to, tone = 'slate', hint }: { label: string; value: number | string; to?: string; tone?: 'slate' | 'red' | 'amber' | 'green' | 'blue'; hint?: string }) => {
@@ -58,6 +61,7 @@ export function Dashboard() {
       <PageHeader title="Dashboard" subtitle={`${isDepot ? 'Your depot' : 'All depots'} · ${d.today}`} />
 
       {isDepot && <>
+        {role === 'TIC' && <DepotAnalytics d={d} overdueJobs={overdue.length + chartOverdue} base={base} />}
         <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Tile label="Open job cards" value={open.filter((c) => ONGOING.includes(c.status) || c.status === 'DRAFT').length} to={`${base}/job-cards`} tone="blue" />
           <Tile label="Overdue cards" value={overdue.length} to={`${base}/job-cards`} tone={overdue.length ? 'red' : 'green'} />
