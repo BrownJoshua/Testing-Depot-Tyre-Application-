@@ -12,7 +12,7 @@ export interface Ctx {
   folioLocs: Record<string, string[]>;
   fleetTypes: Row[]; fleetTypeSizes: Record<string, string[]>; fleets: Row[]; depots: Row[]; jobs: Row[];
   complaintTypes: Row[]; complaintJobs: Record<string, string[]>; schedules: Row[];
-  shifts: Row[]; rejectReasons: Row[]; wearPatterns: Row[]; qcChecklists: Row[]; expectedLife: Row[];
+  shifts: Row[]; rejectReasons: Row[]; wearPatterns: Row[]; qcChecklists: Row[]; expectedLife: Row[]; fims: Row[]; psiNorms: Row[]; tdmColumns: Row[];
 }
 
 async function all(table: string, order: string): Promise<Row[]> {
@@ -22,13 +22,13 @@ async function all(table: string, order: string): Promise<Row[]> {
 }
 
 export async function loadCtx(): Promise<Ctx> {
-  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife] = await Promise.all([
+  const [vendors, refs, sizes, makes, models, folios, locs, fleetTypes, ftSizes, fleets, orgs, jobs, complaintTypes, ctJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife, fims, psiNorms, tdmColumns] = await Promise.all([
     all('vendors', 'vendor_code'), all('ref_values', 'sort_order'), all('tyre_sizes', 'size_code'), all('tyre_makes', 'name'),
     all('tyre_models', 'model_name'), all('tyre_folios', 'folio_no'), all('tyre_folio_locations', 'location_type'),
     all('fleet_types', 'fleet_make'), all('fleet_type_tyre_sizes', 'tyre_size_id'), all('fleets', 'fleet_no'),
     all('org_units', 'sort_order'), all('maintenance_jobs', 'job_code'), all('complaint_types', 'complaint_code'), all('complaint_type_jobs', 'job_id'),
     all('maintenance_schedules', 'schedule_code'), all('shifts', 'start_time'), all('reject_reasons', 'reason_code'), all('wear_patterns', 'pattern_code'),
-    all('qc_checklists', 'qc_code'), all('expected_life_km', 'created_at'),
+    all('qc_checklists', 'qc_code'), all('expected_life_km', 'created_at'), all('fim_checklists', 'fim_code'), all('psi_norms', 'created_at'), all('tyre_detail_columns', 'column_code'),
   ]);
   const complaintJobs: Record<string, string[]> = {};
   for (const l of ctJobs) (complaintJobs[l.complaint_type_id] ??= []).push(jobs.find((j) => j.id === l.job_id)?.job_code ?? '');
@@ -37,7 +37,7 @@ export async function loadCtx(): Promise<Ctx> {
   const fleetTypeSizes: Record<string, string[]> = {};
   for (const l of ftSizes) (fleetTypeSizes[l.fleet_type_id] ??= []).push(sizes.find((x) => x.id === l.tyre_size_id)?.size_code ?? '');
   const depots = orgs.filter((o) => o.unit_type === 'DEPOT');
-  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife };
+  return { vendors: vendors as Vendor[], refs: refs as Ctx['refs'], sizes, makes, models, folios, folioLocs, fleetTypes, fleetTypeSizes, fleets, depots, jobs, complaintTypes, complaintJobs, schedules, shifts, rejectReasons, wearPatterns, qcChecklists, expectedLife, fims, psiNorms, tdmColumns };
 }
 
 export interface Option { value: string; label: string }
@@ -337,6 +337,45 @@ export const ENTITIES: EntityDef[] = [
     nameOf: (f) => String(f.size_code ?? 'tyre size'),
   },
   {
+    type: 'psi_norm', slug: 'psi-norms', title: 'PSI Norms', singular: 'PSI norm',
+    fields: [
+      { key: 'size_id', label: 'Tyre size', kind: 'select', createOnly: true, required: true, options: (c) => c.sizes.map((s) => ({ value: s.id, label: s.size_code })) },
+      { key: 'construction', label: 'Construction', kind: 'select', createOnly: true, required: true, options: () => [{ value: 'NYLON', label: 'Nylon' }, { value: 'RADIAL', label: 'Radial' }] },
+      { key: 'front_regular', label: 'Front · Regular air (PSI)', kind: 'number', required: true },
+      { key: 'front_nitrogen', label: 'Front · Nitrogen (PSI)', kind: 'number', required: true },
+      { key: 'rear_regular', label: 'Rear · Regular air (PSI)', kind: 'number', required: true },
+      { key: 'rear_nitrogen', label: 'Rear · Nitrogen (PSI)', kind: 'number', required: true },
+    ],
+    rows: (c) => c.psiNorms,
+    toForm: (r) => ({ size_id: r.size_id, construction: r.construction, front_regular: r.front_regular, front_nitrogen: r.front_nitrogen, rear_regular: r.rear_regular, rear_nitrogen: r.rear_nitrogen }),
+    columns: [
+      { label: 'Tyre size', value: (r, c) => c.sizes.find((s) => s.id === r.size_id)?.size_code ?? '—' }, { label: 'Construction', value: (r) => r.construction },
+      { label: 'Front regular', value: (r) => r.front_regular }, { label: 'Front nitrogen', value: (r) => r.front_nitrogen },
+      { label: 'Rear regular', value: (r) => r.rear_regular }, { label: 'Rear nitrogen', value: (r) => r.rear_nitrogen },
+    ],
+    nameOf: () => 'PSI norm',
+  },
+  {
+    type: 'tyre_detail_column', slug: 'tyre-detail-columns', title: 'Tyre Detailed Master', singular: 'column', hint: 'Every column a tyre can have. The column ID (TDM-nnn) is given when AM approves.',
+    fields: [
+      { key: 'column_name', label: 'Column name', kind: 'text', required: true },
+      { key: 'description', label: 'Column description', kind: 'text', wide: true },
+      { key: 'integration', label: 'Integration (value comes from another module)', kind: 'bool' },
+      { key: 'input_field', label: 'Input field', kind: 'select', required: true, options: () => ['Text', 'Number', 'Date', 'Select'].map((v) => ({ value: v, label: v })) },
+      { key: 'module', label: 'Module', kind: 'text', hint: 'needed when Integration is on' },
+      { key: 'module_master', label: 'Module master', kind: 'text' },
+      { key: 'required_field', label: 'Required field', kind: 'bool' },
+    ],
+    rows: (c) => c.tdmColumns,
+    toForm: (r) => ({ column_name: r.column_name, description: r.description ?? '', integration: r.integration, input_field: r.input_field, module: r.module ?? '', module_master: r.module_master ?? '', required_field: r.required_field }),
+    columns: [
+      { label: 'Column ID', value: (r) => r.column_code }, { label: 'Column name', value: (r) => r.column_name }, { label: 'Description', value: (r) => r.description ?? '—' },
+      { label: 'Integration', value: (r) => (r.integration ? 'Yes' : 'No') }, { label: 'Input field', value: (r) => r.input_field },
+      { label: 'Module / master', value: (r) => (r.module ? r.module + ' · ' + (r.module_master ?? '') : '—') }, { label: 'Required', value: (r) => (r.required_field ? 'Yes' : 'No') },
+    ],
+    nameOf: (f) => String(f.column_name ?? 'column'),
+  },
+  {
     type: 'shift', slug: 'shifts', title: 'Shift Master', singular: 'shift',
     fields: [
       { key: 'shift_code', label: 'Shift code', kind: 'text', createOnly: true, required: true, hint: 'capital letters, e.g. SPLIT' },
@@ -348,6 +387,19 @@ export const ENTITIES: EntityDef[] = [
     toForm: (r) => ({ shift_code: r.shift_code, shift_name: r.shift_name, start_time: String(r.start_time).slice(0, 5), end_time: String(r.end_time).slice(0, 5) }),
     columns: [{ label: 'Shift', value: (r) => r.shift_name }, { label: 'Start', value: (r) => String(r.start_time).slice(0, 5) }, { label: 'End', value: (r) => String(r.end_time).slice(0, 5) }],
     nameOf: (f) => String(f.shift_name ?? 'shift'),
+  },
+  {
+    type: 'final_inspection_master', slug: 'final-inspection-master', title: 'Final Inspection Master', singular: 'final inspection checklist',
+    fields: [
+      { key: 'fim_code', label: 'Final Inspection ID', kind: 'text', createOnly: true, required: true, hint: 'e.g. FIM-008' },
+      { key: 'title', label: 'Title', kind: 'text', required: true },
+      { key: 'applies_codes', label: 'Applies to (Schedule Codes / Job Codes)', kind: 'text', required: true, wide: true, hint: 'separate with commas, e.g. SCH001, JOB-008' },
+      { key: 'checklist_items', label: 'Checklist items', kind: 'text', required: true, wide: true, multiline: true, hint: 'one item on each line' },
+    ],
+    rows: (c) => c.fims,
+    toForm: (r) => ({ fim_code: r.fim_code, title: r.title, applies_codes: (r.applies_codes ?? []).join(', '), checklist_items: (r.checklist_items ?? []).join(String.fromCharCode(10)) }),
+    columns: [{ label: 'Final Inspection ID', value: (r) => r.fim_code }, { label: 'Title', value: (r) => r.title }, { label: 'Applies to', value: (r) => (r.applies_codes ?? []).join(', ') }, { label: 'Checklist items', value: (r) => String((r.checklist_items ?? []).length) }],
+    nameOf: (f) => `${f.fim_code ?? ''} ${f.title ?? ''}`.trim() || 'final inspection checklist',
   },
 ];
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { CalendarDays, ClipboardList, LogOut, MessageSquareWarning, PackageCheck, PackagePlus, Smartphone, Trash2, Undo2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { Bell } from './Bell';
 
 /** `to` set = a working screen; otherwise a placeholder for a later stage. */
 const TABS: { label: string; Icon: typeof ClipboardList; to?: string; end?: boolean }[] = [
@@ -45,6 +46,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
             <div className="truncate text-base font-bold">{me.full_name}</div>
             <div className="truncate text-xs text-blue-100">{me.employee_code} · {me.org_unit_name ?? ''} · Tyre Man</div>
           </div>
+          <Bell to="/tm/notifications" />
           <button onClick={() => void signOut()} aria-label="Sign out" className="rounded-lg bg-white/10 p-3">
             <LogOut size={20} />
           </button>

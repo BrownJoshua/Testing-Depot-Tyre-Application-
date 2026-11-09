@@ -3,6 +3,8 @@ import { Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { friendlyError } from '../lib/masters';
 import { Banner, btnPlain, cardCls, inputCls, PageHeader } from '../components/ui';
+import { TyreHistory } from '../components/TyreHistory';
+import { useAuth } from '../lib/auth';
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -24,6 +26,8 @@ export function TyreRegister() {
   const [q, setQ] = useState('');
   const [place, setPlace] = useState('');
   const [page, setPage] = useState(0);
+  const { me } = useAuth();
+  const [hist, setHist] = useState<Row | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -64,11 +68,11 @@ export function TyreRegister() {
       <div className={`${cardCls} overflow-x-auto`}>
         <table className="w-full min-w-[960px] text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-3 py-2">MTC No</th><th className="px-3 py-2">Folio</th><th className="px-3 py-2">Make / model</th><th className="px-3 py-2">Where</th><th className="px-3 py-2">Grade</th><th className="px-3 py-2">Condition</th><th className="px-3 py-2">NSD</th><th className="px-3 py-2 text-right">Total KM</th><th className="px-3 py-2">Last rotation</th><th className="px-3 py-2">Last discout</th></tr>
+            <tr><th className="px-3 py-2">MTC No</th><th className="px-3 py-2">Folio</th><th className="px-3 py-2">Make / model</th><th className="px-3 py-2">Where</th><th className="px-3 py-2">Grade</th><th className="px-3 py-2">Condition</th><th className="px-3 py-2">NSD</th><th className="px-3 py-2 text-right">Total KM</th><th className="px-3 py-2">Last rotation</th><th className="px-3 py-2">Last discout</th><th className="px-3 py-2">History</th></tr>
           </thead>
           <tbody>
-            {!tyres && !error && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
-            {tyres && shown.length === 0 && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">No tyres match.</td></tr>}
+            {!tyres && !error && <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
+            {tyres && shown.length === 0 && <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-500">No tyres match.</td></tr>}
             {shown.map((r) => (
               <tr key={r.id} className="border-t border-slate-100">
                 <td className="px-3 py-2 font-medium text-slate-900">{r.mtc_no}</td>
@@ -81,6 +85,7 @@ export function TyreRegister() {
                 <td className="px-3 py-2 text-right">{fmtKm(r.total_km)}</td>
                 <td className="px-3 py-2">{fmtD(r.last_rotation_date)}</td>
                 <td className="px-3 py-2">{fmtD(r.last_discout_date)}</td>
+                <td className="px-3 py-2"><button className="text-blue-700 underline" onClick={() => setHist(r)}>History</button></td>
               </tr>
             ))}
           </tbody>
@@ -93,6 +98,7 @@ export function TyreRegister() {
           <button className={btnPlain} disabled={(page + 1) * PAGE >= rows.length} onClick={() => setPage(page + 1)}>Next</button>
         </div>
       </div>
+      {hist && <TyreHistory tyre={hist} canCorrect={me?.role_code === 'TIC'} onClose={() => setHist(null)} />}
     </div>
   );
 }

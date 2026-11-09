@@ -4,10 +4,11 @@ import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { raiseComplaint } from '../../lib/jobs';
 import {
-  completeFleet, fleetStatus, holdJob, jobCode, loadRound, POSITIONS, psiFlag, resumeJob, ROUND_LABEL, saveReading, WEAR_PATTERNS, type Row, type RoundCtx,
+  completeFleet, completeRotation, fleetStatus, holdJob, jobCode, loadRound, POSITIONS, psiFlag, resumeJob, ROUND_LABEL, saveReading, WEAR_PATTERNS, type Row, type RoundCtx,
 } from '../../lib/rounds';
 import { Banner, btnPlain, btnPrimary, inputCls } from '../../components/ui';
 import { Modal } from '../../components/OpsBits';
+import { shrinkPhoto } from '../../lib/photo';
 
 type F = { present: string; inflated: string; groove: string; grooves: string; wear: string; checked: boolean; remarks: string };
 const blank: F = { present: '', inflated: '', groove: '', grooves: '', wear: '', checked: false, remarks: '' };
@@ -25,6 +26,9 @@ export function TmFleet() {
   const [form, setForm] = useState<Record<string, F>>({});
   const [odo, setOdo] = useState('');
   const [powder, setPowder] = useState(false);
+  const [swapped, setSwapped] = useState<boolean | null>(null);
+  const [notReason, setNotReason] = useState('');
+  const [notPhoto, setNotPhoto] = useState<string | null>(null);
   const [check, setCheck] = useState<Record<string, string>>({});
   const [remarks, setRemarks] = useState('');
   const [complaintFor, setComplaintFor] = useState<{ tyre: string | null; label: string } | null>(null);
@@ -78,7 +82,10 @@ export function TmFleet() {
     try { await fn(); setNotice(ok); load(); then?.(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   const saveAll = async () => { for (const j of open) if (hasInput(j)) await saveReading(j.id, payload(j)); };
-  const complete = (done: string) => run(async () => { await saveAll(); await completeFleet(cardId!, code === 'JOB-001' || code === 'JOB-002' ? check : null, remarks); }, done, () => nav(`/tm/${code === 'JOB-004' || code === 'JOB-005' ? 'month' : 'round'}/${code}`));
+  const complete = (done: string) => run(async () => {
+    if (code === 'JOB-004' || code === 'JOB-005') await completeRotation(cardId!, swapped, odo, code === 'JOB-005' ? powder : null, notReason, notPhoto);
+    else { await saveAll(); await completeFleet(cardId!, code === 'JOB-001' || code === 'JOB-002' ? check : null, remarks); }
+  }, done, () => nav(`/tm/${code === 'JOB-004' || code === 'JOB-005' ? 'month' : 'round'}/${code}`));
 
   if (!ctx) return error ? <Banner kind="error">{error}</Banner> : <p className="text-slate-500">Loading…</p>;
   if (!card || !code) return <Banner kind="info">This job card has nothing for you to work on.</Banner>;
@@ -114,6 +121,23 @@ export function TmFleet() {
           {code === 'JOB-005' && <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm"><div className="text-slate-500">Each tyre</div><div>Unset → same tube, flap and disc → powder → set</div>
             <label className="mt-2 flex items-center gap-2"><input type="checkbox" checked={powder} onChange={(e) => setPowder(e.target.checked)} /> Powder applied</label></div>}
           {!finished && <label className="block text-sm font-medium text-slate-700">Odometer (km) *<input className={inputCls} type="number" min="0" inputMode="numeric" value={odo} onChange={(e) => setOdo(e.target.value)} /></label>}
+          {!finished && (
+            <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+              <div className="mb-2 font-semibold">Were the tyres moved? *</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" aria-pressed={swapped === true} className={`min-h-12 rounded-lg border ${swapped === true ? 'border-blue-600 bg-blue-50 font-semibold' : 'border-slate-300'}`} onClick={() => setSwapped(true)}>Swapped</button>
+                <button type="button" aria-pressed={swapped === false} className={`min-h-12 rounded-lg border ${swapped === false ? 'border-blue-600 bg-blue-50 font-semibold' : 'border-slate-300'}`} onClick={() => setSwapped(false)}>Not swapped</button>
+              </div>
+              {swapped === true && <ul className="mt-2 space-y-1">{myJobs.map((j) => <li key={j.id}>☑ {j.job_id_no} · {tyre(j)?.mtc_no} {tyre(j)?.fitted_position} → {tyre(j)?.fitted_position === 'FR' ? 'FL' : 'FR'} moved</li>)}</ul>}
+              {swapped === false && <div className="mt-2 space-y-2">
+                <textarea className={inputCls} rows={2} placeholder="Why were the tyres not swapped? (required)" value={notReason} onChange={(e) => setNotReason(e.target.value)} />
+                <label className="block text-xs text-slate-600">Photo (required)<input className={inputCls} type="file" accept="image/*" capture="environment"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) shrinkPhoto(f).then(setNotPhoto).catch((er: Error) => setError(er.message)); }} /></label>
+                {notPhoto && <img src={notPhoto} alt="Not swapped" className="h-24 rounded-lg border border-slate-200 object-cover" />}
+                <p className="text-xs text-slate-500">The due tyre&apos;s Job ID is completed and the partner&apos;s Job ID is closed. The tyres stay where they are.</p>
+              </div>}
+            </div>
+          )}
         </div>
       ) : code === 'JOB-003' ? (
         <div className="rounded-xl border border-slate-200 bg-white p-3">

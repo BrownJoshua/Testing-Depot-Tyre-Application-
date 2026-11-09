@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { createCard, daysBetween, JC_STATUS_LABEL, loadJobs, ONGOING, TYPE_LABEL, type JobsCtx, type NewCard, type Row } from '../lib/jobs';
+import { assignWork, createCard, daysBetween, JC_STATUS_LABEL, loadJobs, ONGOING, TYPE_LABEL, type JobsCtx, type NewCard, type Row } from '../lib/jobs';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader } from '../components/ui';
 import { CardBadge, Modal } from '../components/OpsBits';
+import { supabase } from '../lib/supabase';
+import { FinalSelectedDlg } from '../components/FinalSelected';
 import { TyreChangeForm } from '../components/TyreChangeForm';
+import { TyreServiceForm } from '../components/TyreServiceForm';
 
 type Tile = '' | 'ONGOING' | 'OVERDUE' | 'COMPLETED';
 const CLOSED = ['COMPLETED', 'CLOSED'];
@@ -25,6 +28,12 @@ export function JobCards() {
   const [flt, setFlt] = useState({ from: '', to: '', cat: '', src: '', status: '', shift: '', when: '' });
   const [creating, setCreating] = useState(false);
   const [tyreChange, setTyreChange] = useState(false);
+  const [service, setService] = useState(false);
+  const [selFinal, setSelFinal] = useState(false);
+  const [assignTo, setAssignTo] = useState<string[]>([]);
+  const [fims, setFims] = useState<Row[]>([]);
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => { supabase.from('fim_checklists').select('*').order('fim_code').then((r) => setFims((r.data ?? []) as Row[])); }, []);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const blank: NewCard = { type: 'COMPLAINT', fleet: null, tyres: [], jobCodes: [], complaints: [], newComplaints: [], expected: null, shift: null, instruction: '' };
@@ -83,7 +92,7 @@ export function JobCards() {
 
   async function create() {
     setBusy(true); setDialogError(null);
-    try { const id = await createCard(f); nav(`${base}/job-cards/${id}`); } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
+    try { const id = await createCard(f); if (f.type === 'JOB_CODE' && assignTo.length) await assignWork(id, assignTo, null, f.expected, f.shift, ''); nav(`${base}/job-cards/${id}`); } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
   }
   function exportCsv() {
     const head = ['Job Card Number', 'Fleet', 'Type', 'Status', 'Expected date', 'Job IDs', 'Technicians'];
@@ -104,7 +113,7 @@ export function JobCards() {
   return (
     <div>
       <PageHeader title="Job Card Register" subtitle={canCreate ? 'Create job cards, assign inspection and work, and verify finished work.' : 'Monitor the job cards of your depot.'}
-        action={canCreate && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setF(blank); setTyreChange(false); setDialogError(null); setCreating(true); }}><Plus size={16} /> New job card</button>} />
+        action={canCreate && <button className={`${btnPrimary} inline-flex items-center gap-1.5`} onClick={() => { setF(blank); setTyreChange(false); setService(false); setAssignTo([]); setDialogError(null); setCreating(true); }}><Plus size={16} /> New job card</button>} />
       {error && <Banner kind="error">{error}</Banner>}
       <div className="mb-3 flex flex-wrap gap-3">{tileBtn('', 'All', counts.all)}{tileBtn('ONGOING', 'Ongoing', counts.ongoing)}{tileBtn('OVERDUE', 'Overdue', counts.overdue)}{tileBtn('COMPLETED', 'Completed', counts.done)}</div>
       <div className="relative mb-3 max-w-md">
@@ -121,6 +130,7 @@ export function JobCards() {
         <span className="flex gap-1">{([['', 'All'], ['OVERDUE', 'Overdue'], ['TODAY', 'Today'], ['UPCOMING', 'Upcoming']] as const).map(([k, l]) => <button key={k} onClick={() => setFlt({ ...flt, when: k })} className={`rounded-full border px-3 py-1 ${flt.when === k ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{l}</button>)}</span>
         <button className={btnPlain} onClick={() => setFlt({ from: '', to: '', cat: '', src: '', status: '', shift: '', when: '' })}>Reset</button>
         <button className={btnPlain} onClick={exportCsv}>Export CSV</button>
+        {canCreate && <button className={btnPlain} onClick={() => setSelFinal(true)}>Final inspection - selected</button>}
       </div>}
       <div className={`${cardCls} overflow-x-auto`}>
         <table className="w-full min-w-[820px] text-sm">
@@ -149,21 +159,26 @@ export function JobCards() {
         </table>
       </div>
 
+      {flash && <Banner kind="ok">{flash}</Banner>}
+      {selFinal && ctx && <FinalSelectedDlg cards={ctx.cards.filter((c) => c.status === 'FINAL_INSPECTION')} fleetNo={(c) => fleet(c.fleet_id)?.fleet_no ?? '—'} fims={fims} onClose={() => setSelFinal(false)} onDone={(m) => { setFlash(m); load(); }} />}
       {creating && ctx && (
         <Modal title={fromComplaint ? 'Create job card from complaint' : 'New job card'} onClose={closeForm}>
           {dialogError && <Banner kind="error">{dialogError}</Banner>}
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2" role="group" aria-label="Job type">
               {(['COMPLAINT', 'JOB_CODE'] as const).map((t) => (
-                <button type="button" key={t} disabled={!!fromComplaint} onClick={() => { setTyreChange(false); setF({ ...blank, type: t, fleet: f.fleet }); }}
-                  className={`rounded-full border px-3 py-1 text-sm ${!tyreChange && f.type === t ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{TYPE_LABEL[t]}</button>
+                <button type="button" key={t} disabled={!!fromComplaint} onClick={() => { setTyreChange(false); setService(false); setF({ ...blank, type: t, fleet: f.fleet }); }}
+                  className={`rounded-full border px-3 py-1 text-sm ${!tyreChange && !service && f.type === t ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>{TYPE_LABEL[t]}</button>
               ))}
-              <button type="button" disabled={!!fromComplaint} onClick={() => setTyreChange(true)}
+              <button type="button" disabled={!!fromComplaint} onClick={() => { setTyreChange(true); setService(false); }}
                 className={`rounded-full border px-3 py-1 text-sm ${tyreChange ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>Tyre Changing</button>
+              <button type="button" disabled={!!fromComplaint} onClick={() => { setService(true); setTyreChange(false); }}
+                className={`rounded-full border px-3 py-1 text-sm ${service ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`}>Setting / Unsetting</button>
               <span className="self-center text-xs text-slate-500">Schedule cards come from a Schedule ID.</span>
             </div>
             {tyreChange && <TyreChangeForm ctx={ctx} onCancel={closeForm} onDone={(id) => nav(`${base}/job-cards/${id}`)} />}
-            {!tyreChange && <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void create(); }}>
+            {service && <TyreServiceForm ctx={ctx} onCancel={closeForm} onDone={(id) => nav(`${base}/job-cards/${id}`)} />}
+            {!tyreChange && !service && <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void create(); }}>
             <Field label="Fleet *">
               <select className={inputCls} value={f.fleet ?? ''} disabled={!!fromComplaint} onChange={(e) => setF({ ...f, fleet: e.target.value || null, tyres: [], complaints: [], newComplaints: [] })} required={f.type === 'COMPLAINT'}>
                 <option value="">{f.type === 'JOB_CODE' ? 'No fleet (live stock)' : 'Select…'}</option>
@@ -209,6 +224,8 @@ export function JobCards() {
                 </div></fieldset>
             </>}
 
+            {f.type === 'JOB_CODE' && <fieldset><legend className="mb-1 text-sm font-medium text-slate-700">Create and assign to (optional, up to 3)</legend>
+              <div className="grid grid-cols-1 gap-1 rounded-lg border border-slate-200 p-2 sm:grid-cols-2">{(ctx.staff ?? []).map((s: Row) => <label key={s.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={assignTo.includes(s.id)} onChange={() => setAssignTo(assignTo.includes(s.id) ? assignTo.filter((x) => x !== s.id) : [...assignTo, s.id])} /> {s.full_name} ({s.employee_code})</label>)}</div></fieldset>}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Expected completion date"><input className={inputCls} type="date" value={f.expected ?? ''} onChange={(e) => setF({ ...f, expected: e.target.value || null })} /></Field>
               <Field label="Shift"><select className={inputCls} value={f.shift ?? ''} onChange={(e) => setF({ ...f, shift: e.target.value || null })}><option value="">—</option>{ctx.shifts.map((s) => <option key={s.id} value={s.id}>{s.shift_name}</option>)}</select></Field>

@@ -38,3 +38,4 @@ export const createRun = (schedule: string, from: string, to: string, fleets: st
 export const assignTechnician = (run: string, items: string[], employees: string[], due: string | null, shift: string | null, remarks: string) =>
   rpc<number>('schedule_assign', { p_run: run, p_items: items, p_employees: employees, p_due: due, p_shift: shift, p_remarks: remarks || null });
 export const moveItem = (item: string, date: string, reason: string) => rpc('schedule_item_move', { p_item: item, p_new_date: date, p_reason: reason });
+export const replaceTechnician = (items: string[], employees: string[]) => rpc<number>('schedule_replace', { p_items: items, p_employees: employees });

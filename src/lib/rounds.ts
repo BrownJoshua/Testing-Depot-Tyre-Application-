@@ -49,6 +49,17 @@ export function fleetStatus(c: RoundCtx, cardId: string, mine?: string): { label
 
 export const saveReading = (job: string, data: Record<string, unknown>) => rpc('reading_save', { p_job: job, p_data: data });
 export const completeFleet = (card: string, checklist: Record<string, string> | null, remarks: string) => rpc<number>('fleet_round_complete', { p_card: card, p_checklist: checklist, p_remarks: remarks || null });
+export const completeRotation = (card: string, swapped: boolean | null, odometer: string, powder: boolean | null, reason: string, photo: string | null) =>
+  rpc<number>('rotation_complete', { p_card: card, p_swapped: swapped, p_odometer: odometer === '' ? null : Number(odometer), p_powder: powder, p_reason: reason || null, p_photo: photo });
+/** the work form of a Removal / Unsetting / Setting / Fitment step */
+export interface WorkFormData {
+  scanned_no: string; odometer_km?: string; wear_pattern?: string; nsd_mm?: string; psi_after?: string; powder_applied?: boolean; photo?: string | null; remarks?: string;
+  parts?: Record<'tube' | 'flap' | 'disc', { no: string; condition: '' | 'USABLE' | 'NOT_USABLE' }>;
+}
+export const completeWorkForm = (job: string, data: WorkFormData) => rpc('work_form_complete', { p_job: job, p_data: data });
+export const setTyreUnavailable = (job: string, remarks: string) => rpc<string>('fitment_set_tyre_unavailable', { p_job: job, p_remarks: remarks || null });
+export const createTyreService = (code: 'JOB-010' | 'JOB-011', tyre: string, expected: string | null, shift: string | null, instruction: string) =>
+  rpc<string>('tyre_service_create', { p_job_code: code, p_tyre: tyre, p_expected: expected, p_shift: shift, p_instruction: instruction || null });
 export const holdJob = (job: string, remarks: string) => rpc('job_hold', { p_job: job, p_remarks: remarks });
 export const resumeJob = (job: string) => rpc('job_resume', { p_job: job });
 

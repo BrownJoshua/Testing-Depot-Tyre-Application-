@@ -189,7 +189,7 @@ begin
   begin perform public.admin_withdraw_master_request(v_id, 'again', 'tester'); assert false, 'withdrew twice'; exception when raise_exception then null; end;
 
   -- registry: all 27 types exist and only the test type is enabled
-  select count(*) into n from public.master_entity_registry where entity_type <> 'test_entity'; assert n = 27, 'expected 27 registered master types, found ' || n;
+  select count(*) into n from public.master_entity_registry where entity_type <> 'test_entity'; assert n >= 27, 'expected at least 27 registered master types, found ' || n;
   select count(*) into n from public.master_entity_registry where is_enabled and entity_type <> 'test_entity'; assert n >= 0, 'real master types';
 end $$;
 

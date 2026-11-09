@@ -5,6 +5,7 @@ import { completeJobId, daysBetween, loadJobs, startJobId, type JobsCtx, type Ro
 import { Banner, btnPlain, btnPrimary } from '../../components/ui';
 import { CardBadge } from '../../components/OpsBits';
 import { createSrn } from '../../lib/stock';
+import { RescheduleButton } from '../../components/RescheduleButton';
 import { CHANGE_CODES, ROUND_CODES, ROUND_LABEL, STEP_LABEL } from '../../lib/rounds';
 import { blankScrap, ScrapLines, type ScrapRow } from './TmStock';
 
@@ -117,6 +118,7 @@ export function TmJobs() {
                 : <button className={`${btnPlain} min-h-12 text-base`} disabled={busy === j.id} onClick={() => (isLast(j) ? (setReview(j), setScrapYes(null)) : setConfirming(j.id))}>Complete</button>)}
             </div>
             <Link className="mt-3 block text-center text-sm font-medium text-blue-700 underline" to={`/tm/complaint?fleet=${fleet(j.job_card_id)?.id ?? ''}`}>Raise a complaint on this fleet</Link>
+            <RescheduleButton card={j.job_card_id} cardNo={card(j.job_card_id)?.job_card_no ?? ''} today={ctx!.today} onDone={(m) => setNotice(m)} />
           </article>
         );
       })}

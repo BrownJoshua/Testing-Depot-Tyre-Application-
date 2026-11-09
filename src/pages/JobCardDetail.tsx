@@ -4,11 +4,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/masters';
 import {
-  assignInspection, assignWork, closeComplaint, completeJobId, daysBetween, decideInspection, finalInspect, fmtMinutes, loadCardDetail, loadJobs,
-  reinspectComplaint, SOURCE_LABEL, startJobId, TYPE_LABEL, type Decision, type FoundComplaint, type JobsCtx, type Row,
+  assignInspection, assignWork, closeComplaint, completeJobId, daysBetween, decideInspection, finalInspect, fmtMinutes, loadCardDetail, loadFimForCard, loadJobs,
+  reinspectComplaint, SOURCE_LABEL, startJobId, TYPE_LABEL, type ChecklistAnswer, type Decision, type FoundComplaint, type JobsCtx, type Row,
 } from '../lib/jobs';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader, ReasonDialog } from '../components/ui';
 import { CardBadge, Modal } from '../components/OpsBits';
+import { PostedHint } from '../components/PostedHint';
+import { FleetTyreView, NextSchedules } from '../components/FleetExtras';
 import { CardDocsView, ProvideTyreDlg, ReceiveGinDlg } from '../components/CardDocs';
 import { loadCardDocs, provideTyre, receiveGin, type CardDocs } from '../lib/stock';
 
@@ -24,6 +26,8 @@ export function JobCardDetail() {
   const [ctx, setCtx] = useState<JobsCtx | null>(null);
   const [detail, setDetail] = useState<{ events: Row[]; finals: Row[]; workAssignments: Row[] } | null>(null);
   const [docs, setDocs] = useState<CardDocs | null>(null);
+  const [fim, setFim] = useState<Row | null>(null);
+  const [extra, setExtra] = useState<'tyres' | 'next' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dlg, setDlg] = useState<Dlg | null>(null);
@@ -32,7 +36,7 @@ export function JobCardDetail() {
 
   const load = useCallback(() => {
     if (!id) return;
-    Promise.all([loadJobs(), loadCardDetail(id), loadCardDocs(id)]).then(([c, d, s]) => { setCtx(c); setDetail(d); setDocs(s); }).catch((e: Error) => setError(e.message));
+    Promise.all([loadJobs(), loadCardDetail(id), loadCardDocs(id), loadFimForCard(id)]).then(([c, d, s, f]) => { setCtx(c); setDetail(d); setDocs(s); setFim(f); }).catch((e: Error) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
 
@@ -162,19 +166,22 @@ export function JobCardDetail() {
       )}
 
       <div className="flex flex-wrap justify-end gap-2">
+        {fleet && <><button className={btnPlain} onClick={() => setExtra('tyres')}>Fleet Tyre View</button><button className={btnPlain} onClick={() => setExtra('next')}>Next schedules</button></>}
         {canAssignInspection && <button className={btnPlain} onClick={() => { setDlgError(null); setDlg({ k: 'inspection' }); }}>Assign Inspection</button>}
         {canAssignWork && <button className={btnPlain} onClick={() => { setDlgError(null); setDlg({ k: 'work' }); }}>{card.status === 'ASSIGNED_FOR_WORK' ? 'Reassign Technician' : 'Assign Work'}</button>}
         {canFinal && <button className={btnPrimary} onClick={() => { setDlgError(null); setDlg({ k: 'final' }); }}>Final Inspection</button>}
       </div>
 
+      {extra === 'tyres' && fleet && <FleetTyreView fleet={fleet} tyres={ctx.tyres} onClose={() => setExtra(null)} />}
+      {extra === 'next' && fleet && <NextSchedules fleet={fleet} onClose={() => setExtra(null)} />}
       {dlg?.k === 'inspection' && <AssignInspectionDlg ctx={ctx} card={card} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
         onSave={(v) => void act(() => assignInspection(card.id, v.inspector, v.due, v.shift, v.remarks), 'Inspection assigned.')} />}
       {dlg?.k === 'work' && <AssignWorkDlg ctx={ctx} card={card} jobs={assignable} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
         onSave={(v) => void act(() => assignWork(card.id, v.employees, v.per, v.due, v.shift, v.remarks), 'Work assigned.')} />}
       {dlg?.k === 'inspect' && <InspectDlg ctx={ctx} card={card} ins={dlg.ins} complaints={complaints.filter((c) => c.inspection_id === dlg.ins.id && c.state === 'PENDING_INSPECTION')} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
         onSave={(d, f, r) => void act(() => decideInspection(dlg.ins.id, d, f, r), 'Inspection saved.')} />}
-      {dlg?.k === 'final' && <FinalDlg jobs={jobIds.filter((j) => j.status === 'DONE')} jobOf={jobOf} tyreLabel={tyreLabel} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
-        onSave={(r, remarks, jobs) => void act(() => finalInspect(card.id, r, remarks, jobs), r === 'PASS' ? 'Passed. The job card is completed.' : r === 'REWORK' ? 'Sent back for rework.' : 'Final inspection failed.')} />}
+      {dlg?.k === 'final' && <FinalDlg fim={fim} jobs={jobIds.filter((j) => j.status === 'DONE')} jobOf={jobOf} tyreLabel={tyreLabel} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
+        onSave={(r, remarks, jobs, cl) => void act(() => finalInspect(card.id, r, remarks, jobs, cl), r === 'PASS' ? 'Passed. The job card is completed.' : r === 'REWORK' ? 'Sent back for rework.' : 'Final inspection failed.')} />}
       {dlg?.k === 'behalf' && <ReasonDialog title={`Enter ${dlg.job.job_id_no} on behalf of the Tyre Man?`} label="Reason (required)" confirmLabel="Complete" required busy={busy} error={dlgError}
         onConfirm={(t) => void act(() => completeJobId(dlg.job.id, t), 'Job ID completed on behalf.')} onCancel={() => setDlg(null)} />}
       {dlg?.k === 'gin' && docs && <ReceiveGinDlg ctx={ctx} docs={docs} gin={dlg.gin} busy={busy} error={dlgError} onCancel={() => setDlg(null)}
@@ -224,6 +231,7 @@ function AssignWorkDlg({ ctx, card, jobs, busy, error, onCancel, onSave }: { ctx
     <Modal title={card.status === 'ASSIGNED_FOR_WORK' ? 'Reassign Technician' : 'Assign Work'} onClose={onCancel}>
       {error && <Banner kind="error">{error}</Banner>}
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); onSave({ employees: emps, per: perPayload, due: due || null, shift: shift || null, remarks }); }}>
+        <PostedHint jobCodes={[...new Set(jobs.map((j) => j.job_code_id as string))]} date={due} shift={shift || null} staff={ctx.staff} chosen={emps} use={setEmps} />
         <fieldset><legend className="mb-1 text-sm font-medium text-slate-700">Tyre Men * ({emps.length} chosen)</legend>
           <div className="grid grid-cols-1 gap-1 rounded-lg border border-slate-200 p-2 sm:grid-cols-2">
             {ctx.staff.map((s) => <label key={s.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={emps.includes(s.id)} onChange={() => setEmps(toggle(emps, s.id))} /> {s.full_name} ({s.employee_code})</label>)}
@@ -305,15 +313,22 @@ export function InspectDlg({ ctx, card, ins, complaints, busy, error, onCancel, 
   );
 }
 
-function FinalDlg({ jobs, jobOf, tyreLabel, busy, error, onCancel, onSave }: { jobs: Row[]; jobOf: (j: Row) => Row | undefined; tyreLabel: (t: string | null) => string; busy: boolean; error: string | null;
-  onCancel: () => void; onSave: (r: 'PASS' | 'FAIL' | 'REWORK', remarks: string, jobs: string[]) => void }) {
+function FinalDlg({ fim, jobs, jobOf, tyreLabel, busy, error, onCancel, onSave }: { fim: Row | null; jobs: Row[]; jobOf: (j: Row) => Row | undefined; tyreLabel: (t: string | null) => string; busy: boolean; error: string | null;
+  onCancel: () => void; onSave: (r: 'PASS' | 'FAIL' | 'REWORK', remarks: string, jobs: string[], checklist: ChecklistAnswer[] | null) => void }) {
+  const items: string[] = fim?.checklist_items ?? [];
+  const [ans, setAns] = useState<Record<string, boolean>>(() => Object.fromEntries(items.map((i) => [i, true])));
   const [result, setResult] = useState<'PASS' | 'FAIL' | 'REWORK'>('PASS');
   const [remarks, setRemarks] = useState('');
   const [pick, setPick] = useState<string[]>([]);
   return (
     <Modal title="Final Inspection" onClose={onCancel}>
       {error && <Banner kind="error">{error}</Banner>}
-      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); onSave(result, remarks, result === 'REWORK' ? pick : []); }}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); onSave(result, remarks, result === 'REWORK' ? pick : [], items.length ? items.map((i) => ({ item: i, pass: ans[i] })) : null); }}>
+        {fim && <fieldset><legend className="mb-1 text-sm font-medium text-slate-700">{fim.fim_code} {fim.title}</legend>
+          <div className="space-y-1 rounded-lg border border-slate-200 p-2 text-sm">{items.map((i) => (
+            <div key={i} className="flex items-center justify-between gap-2"><span>{i}</span><span className="flex gap-3">
+              <label className="flex items-center gap-1"><input type="radio" name={`fim-${i}`} checked={ans[i]} onChange={() => setAns({ ...ans, [i]: true })} /> Pass</label>
+              <label className="flex items-center gap-1"><input type="radio" name={`fim-${i}`} checked={!ans[i]} onChange={() => setAns({ ...ans, [i]: false })} /> Fail</label></span></div>))}</div></fieldset>}
         <div className="flex gap-4 text-sm" role="radiogroup" aria-label="Result">
           {([['PASS', 'Pass'], ['FAIL', 'Fail'], ['REWORK', 'Rework']] as const).map(([k, l]) => <label key={k} className="flex items-center gap-1.5"><input type="radio" name="result" checked={result === k} onChange={() => setResult(k)} /> {l}</label>)}
         </div>

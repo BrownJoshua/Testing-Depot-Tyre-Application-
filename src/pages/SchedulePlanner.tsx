@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { addDaysIso } from '../lib/ops';
-import { assignTechnician, createRun, frequencyText, loadChart, loadPlanner, moveItem, STATE_LABEL, STATE_STYLE, type PlannerCtx, type Row } from '../lib/schedules';
+import { assignTechnician, createRun, frequencyText, loadChart, loadPlanner, moveItem, replaceTechnician, STATE_LABEL, STATE_STYLE, type PlannerCtx, type Row } from '../lib/schedules';
 import { Banner, btnPlain, btnPrimary, cardCls, Field, inputCls, PageHeader } from '../components/ui';
 import { Modal } from '../components/OpsBits';
+import { PostedHint } from '../components/PostedHint';
+import { assignFromDuty } from '../lib/notify';
 import { ScheduledWork } from '../components/ScheduledWork';
+import { ReplaceDlg, ScheduleCards } from '../components/ScheduleCards';
 
 const PAGE = 10;
 const StateBadge = ({ s }: { s: string }) => <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATE_STYLE[s]}`}>{STATE_LABEL[s]}</span>;
@@ -26,6 +29,7 @@ export function SchedulePlanner() {
   const [picked, setPicked] = useState<string[]>([]);
   const [creating, setCreating] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const [moving, setMoving] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
   const [dlgError, setDlgError] = useState<string | null>(null);
@@ -44,6 +48,8 @@ export function SchedulePlanner() {
   const shown = useMemo(() => rows.filter((r) => !filter || r.state === filter), [rows, filter]);
   const counts = useMemo(() => { const m: Record<string, number> = {}; for (const r of rows) m[r.state] = (m[r.state] ?? 0) + 1; return m; }, [rows]);
   const selectable = shown.filter((r) => !r.job_card_id && !r.done_date);
+  const pickedNew = picked.filter((id) => !rows.find((x) => x.id === id)?.job_card_id);
+  const pickedAssigned = picked.filter((id) => !!rows.find((x) => x.id === id)?.job_card_id);
   const pageRows = shown.slice(page * PAGE, page * PAGE + PAGE);
 
   async function act(fn: () => Promise<unknown>, ok: string, done: () => void) {
@@ -86,8 +92,9 @@ export function SchedulePlanner() {
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Schedule Chart</h2>
           {ctx.runs.length === 0 && <Banner kind="info">No Schedule ID yet.{isTic && ' Press “Create Schedule ID” on a schedule above.'}</Banner>}
-          <div className="space-y-3">
-            {ctx.runs.map((r) => (
+          {ctx.runs.length > 0 && <div className="mb-4"><ScheduleCards runs={ctx.runs} schedules={ctx.schedules} today={ctx.today} fleetCount={ctx.fleets.filter((f) => f.status === 'ACTIVE').length} isTic={isTic} openId={open} onOpen={(id) => { setOpen(id); setTimeout(() => document.getElementById('run-detail')?.scrollIntoView({ behavior: 'smooth' }), 300); }} /></div>}
+          <div className="space-y-3" id="run-detail">
+            {ctx.runs.filter((r) => r.id === open).map((r) => (
               <div key={r.id} className={`${cardCls} p-4`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div><div className="font-semibold text-slate-900">{r.schedule_no} <span className="font-normal text-slate-500">· {sched(r.schedule_id)?.schedule_code} {sched(r.schedule_id)?.schedule_name}</span></div>
@@ -101,7 +108,8 @@ export function SchedulePlanner() {
                       {Object.keys(STATE_LABEL).map((s) => <button key={s} className={`rounded-full border px-3 py-1 ${filter === s ? 'border-blue-600 bg-blue-50 font-semibold text-blue-800' : 'border-slate-300 bg-white text-slate-600'}`} onClick={() => { setFilter(s); setPage(0); }}>{STATE_LABEL[s]} ({counts[s] ?? 0})</button>)}
                       {isTic && <>
                         <button className={btnPlain} onClick={() => setPicked(picked.length === selectable.length ? [] : selectable.map((x) => x.id))}>{picked.length > 0 && picked.length === selectable.length ? 'Clear selection' : 'Select all without a job card'}</button>
-                        <button className={btnPrimary} disabled={picked.length === 0} onClick={() => { setDlgError(null); setA({ emps: [], due: '', shift: '', remarks: '' }); setAssigning(true); }}>Assign Technician ({picked.length})</button></>}
+                        <button className={btnPrimary} disabled={pickedNew.length === 0} onClick={() => { setDlgError(null); setA({ emps: [], due: '', shift: '', remarks: '' }); setAssigning(true); }}>Assign Technician ({pickedNew.length})</button>
+                        <button className={btnPlain} disabled={pickedAssigned.length === 0} onClick={() => { setDlgError(null); setReplacing(true); }}>Replace selected ({pickedAssigned.length})</button></>}
                     </div>
                     <div className="overflow-x-auto rounded-lg border border-slate-200">
                       <table className="w-full min-w-[720px] text-sm">
@@ -110,7 +118,7 @@ export function SchedulePlanner() {
                           {pageRows.length === 0 && <tr><td colSpan={9} className="px-3 py-4 text-center text-slate-500">{rows.length === 0 ? 'Loading…' : 'Nothing here.'}</td></tr>}
                           {pageRows.map((x) => (
                             <tr key={x.id} className="border-t border-slate-100">
-                              {isTic && <td className="px-3 py-2">{!x.job_card_id && !x.done_date && <input type="checkbox" aria-label={`Select ${x.fleet_no} ${x.due_date}`} checked={picked.includes(x.id)} onChange={() => setPicked(toggle(picked, x.id))} />}</td>}
+                              {isTic && <td className="px-3 py-2">{!x.done_date && <input type="checkbox" aria-label={`Select ${x.fleet_no} ${x.due_date}`} checked={picked.includes(x.id)} onChange={() => setPicked(toggle(picked, x.id))} />}</td>}
                               <td className="px-3 py-2 font-medium">{x.fleet_no}</td>
                               {tyreLevel && <><td className="px-3 py-2">{x.position}</td><td className="px-3 py-2">{x.tyre_no}</td><td className="px-3 py-2">{(sched(r.schedule_id)?.work_category === 'TYRE_DISCOUT' ? x.last_discout_date : x.last_rotation_date) ?? '—'}</td></>}
                               <td className="px-3 py-2">{x.due_date}</td><td className="px-3 py-2">{x.done_date ?? '—'}</td>
@@ -153,8 +161,9 @@ export function SchedulePlanner() {
       {assigning && ctx && run && (
         <Modal title={`Assign Technician · ${run.schedule_no}`} onClose={() => setAssigning(false)}>
           {dlgError && <Banner kind="error">{dlgError}</Banner>}
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void act(() => assignTechnician(run.id, picked, a.emps, a.due || null, a.shift || null, a.remarks), 'Job cards created and assigned.', () => { setAssigning(false); setPicked([]); }); }}>
+          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void act(() => assignTechnician(run.id, pickedNew, a.emps, a.due || null, a.shift || null, a.remarks), 'Job cards created and assigned.', () => { setAssigning(false); setPicked([]); }); }}>
             <p className="text-sm text-slate-600">One job card is created for each fleet of the {picked.length} selected row{picked.length === 1 ? '' : 's'} and assigned at once. The fleets are shared among the chosen people in turn.</p>
+            <PostedHint schedule={run.schedule_id} date={a.due || ((m: string) => (m && m > ctx.today ? m : ctx.today))(picked.map((p) => rows.find((c) => c.id === p)?.due_date as string).filter(Boolean).sort()[0] ?? '')} shift={a.shift || null} staff={ctx.staff} chosen={a.emps} use={(ids) => setA({ ...a, emps: ids })} />
             <fieldset><legend className="mb-1 text-sm font-medium text-slate-700">Tyre Men * ({a.emps.length} chosen)</legend>
               <div className="grid grid-cols-1 gap-1 rounded-lg border border-slate-200 p-2 sm:grid-cols-2">{ctx.staff.map((s) => <label key={s.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={a.emps.includes(s.id)} onChange={() => setA({ ...a, emps: toggle(a.emps, s.id) })} /> {s.full_name} ({s.employee_code})</label>)}</div></fieldset>
             <div className="grid grid-cols-2 gap-3">
@@ -162,10 +171,11 @@ export function SchedulePlanner() {
               <Field label="Shift"><select className={inputCls} value={a.shift} onChange={(e) => setA({ ...a, shift: e.target.value })}><option value="">—</option>{ctx.shifts.map((s) => <option key={s.id} value={s.id}>{s.shift_name}</option>)}</select></Field>
             </div>
             <Field label="Remarks"><textarea className={inputCls} rows={2} value={a.remarks} onChange={(e) => setA({ ...a, remarks: e.target.value })} /></Field>
-            <div className="flex justify-end gap-2"><button type="button" className={btnPlain} onClick={() => setAssigning(false)} disabled={busy}>Cancel</button><button type="submit" className={btnPrimary} disabled={busy || a.emps.length === 0}>{busy ? 'Working…' : 'Assign'}</button></div>
+            <div className="flex justify-end gap-2"><button type="button" className={btnPlain} onClick={() => setAssigning(false)} disabled={busy}>Cancel</button><button type="button" className={btnPlain} disabled={busy} onClick={() => void act(() => assignFromDuty(run.id, pickedNew, a.due || null, a.shift || null, a.remarks), 'Job cards created and assigned from Duty Posting.', () => { setAssigning(false); setPicked([]); })}>Assign from Duty Posting</button><button type="submit" className={btnPrimary} disabled={busy || a.emps.length === 0}>{busy ? 'Working…' : 'Assign'}</button></div>
           </form>
         </Modal>
       )}
+      {replacing && ctx && <ReplaceDlg staff={ctx.staff} count={pickedAssigned.length} onCancel={() => setReplacing(false)} onDone={async (emps) => { await replaceTechnician(pickedAssigned, emps); setNotice('Technician replaced.'); setReplacing(false); setPicked([]); load(); if (open) loadRows(open); }} />}
       {moving && (
         <Modal title={`Prepone / Postpone · ${moving.fleet_no}${moving.tyre_no ? ` · ${moving.tyre_no}` : ''}`} onClose={() => setMoving(null)}>
           {dlgError && <Banner kind="error">{dlgError}</Banner>}

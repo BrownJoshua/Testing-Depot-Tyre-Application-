@@ -90,7 +90,7 @@ begin
   end loop;
   foreach t in array array['public.tyre_change_create(uuid,jsonb,uuid,date,uuid,text)', 'public.wsr_create(jsonb)', 'public.wsr_issue(uuid,jsonb)', 'public.grn_receive_wsr_gin(uuid,jsonb)',
       'public.mrn_create(uuid,uuid,text)', 'public.mrn_receive(uuid,boolean,text,text)', 'public.srn_create(uuid,jsonb,text)', 'public.srn_receive(uuid)', 'public.duty_post(uuid[],uuid,uuid,date[],uuid)',
-      'public.duty_unpost(uuid[],uuid,uuid,date[])', 'public.fitment_provide_tyre(uuid,uuid)', 'public.job_id_start(uuid)', 'public.job_id_complete(uuid,text)', 'public.final_inspection(uuid,text,text,uuid[])'] loop
+      'public.duty_unpost(uuid[],uuid,uuid,date[])', 'public.fitment_provide_tyre(uuid,uuid)', 'public.job_id_start(uuid)', 'public.job_id_complete(uuid,text)', 'public.final_inspection(uuid,text,text,uuid[],jsonb)'] loop
     assert not has_function_privilege('anon', t, 'execute'), 'anon can execute ' || t;
   end loop;
 

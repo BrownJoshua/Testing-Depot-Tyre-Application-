@@ -12,7 +12,9 @@ import { VendorList } from './pages/VendorList';
 import { Complaints } from './pages/Complaints';
 import { DutyPosting } from './pages/DutyPosting';
 import { TmGrn, TmMrn, TmSrn, TmWsr } from './pages/tm/TmStock';
-import { TmMonth, TmNorms, TmNotifications, TmRound } from './pages/tm/TmRounds';
+import { TmMonth, TmNorms, TmRound } from './pages/tm/TmRounds';
+import { Notifications } from './pages/Notifications';
+import { Requests } from './pages/Requests';
 import { TmFleet } from './pages/tm/TmFleet';
 import { TmWork } from './pages/tm/TmWork';
 import { FleetGrouping } from './pages/FleetGrouping';
@@ -22,7 +24,9 @@ import { Dashboard } from './pages/Dashboard';
 import { Reports } from './pages/Reports';
 import { SchedulePlanner } from './pages/SchedulePlanner';
 import { ReturnGrnPage, SrnPage, WsrPage } from './pages/StockDocs';
-import { DepotIndentPage, GatePassPage, GinPage, GrnInPage, StockApprovalsPage, TransferRequestPage } from './pages/Logistics';
+import { DepotIndentPage, GatePassPage, GinPage, StockApprovalsPage, TransferRequestPage } from './pages/Logistics';
+import { GrnInPage } from './pages/GrnPage';
+import { AirTypePage, CorrectionsPage, DamagePage, DrnPage, PfrPage } from './pages/RegisterReports';
 import { OutsourceEmployees, TyreManRegister } from './pages/StaffRegisters';
 import { LiveStock } from './pages/LiveStock';
 import { TmComplaint } from './pages/tm/TmComplaint';
@@ -43,7 +47,11 @@ export default function App() {
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="air-type" element={<AirTypePage />} />
+          <Route path="corrections" element={<CorrectionsPage />} />
+          <Route path="damage-reports" element={<DamagePage />} />
           <Route index element={<RoleHome />} />
           <Route path="vendors" element={<VendorList />} />
           <Route path="vendors/new" element={<VendorForm />} />
@@ -62,7 +70,10 @@ export default function App() {
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="air-type" element={<AirTypePage />} />
+          <Route path="damage-reports" element={<DamagePage />} />
           <Route index element={<RoleHome />} />
           <Route path="approvals" element={<ApprovalInbox mode="pending" />} />
           <Route path="purchase-indent" element={<PurchaseIndent />} />
@@ -79,7 +90,9 @@ export default function App() {
           <Route path="stock-approvals" element={<StockApprovalsPage />} />
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="drn" element={<DrnPage />} />
           <Route path="planner" element={<SchedulePlanner />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
@@ -96,11 +109,18 @@ export default function App() {
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="premature-failure" element={<PfrPage />} />
+          <Route path="damage-reports" element={<DamagePage />} />
+          <Route path="drn" element={<DrnPage />} />
+          <Route path="air-type" element={<AirTypePage />} />
+          <Route path="corrections" element={<CorrectionsPage />} />
           <Route path="planner" element={<SchedulePlanner />} />
           <Route path="live-stock" element={<LiveStock />} />
           <Route path="outsource" element={<OutsourceEmployees />} />
           <Route path="tyre-men" element={<TyreManRegister />} />
+          <Route path="requests" element={<Requests />} />
           <Route path="wsr" element={<WsrPage only="wsr" />} />
           <Route path="wsr-gin" element={<WsrPage only="gin" />} />
           <Route path="indent" element={<DepotIndentPage />} />
@@ -137,7 +157,7 @@ export default function App() {
           <Route path="fleet/:cardId" element={<TmFleet />} />
           <Route path="work/:cardId" element={<TmWork />} />
           <Route path="norms" element={<TmNorms />} />
-          <Route path="notifications" element={<TmNotifications />} />
+          <Route path="notifications" element={<Notifications mobile />} />
           <Route path="*" element={<TmJobs />} />
         </Routes>
       </MobileShell></ProtectedRoute>} />

@@ -75,7 +75,25 @@ export const assignWork = (card: string, employees: string[], per: Record<string
   rpc('job_card_assign_work', { p_card: card, p_employees: employees, p_per: per, p_due: due, p_shift: shift, p_source: 'MTC', p_remarks: remarks || null });
 export const startJobId = (id: string) => rpc('job_id_start', { p_job: id });
 export const completeJobId = (id: string, onBehalfReason: string | null) => rpc('job_id_complete', { p_job: id, p_on_behalf_reason: onBehalfReason });
-export const finalInspect = (card: string, result: 'PASS' | 'FAIL' | 'REWORK', remarks: string, reworkJobs: string[]) =>
-  rpc('final_inspection', { p_card: card, p_result: result, p_remarks: remarks || null, p_rework_jobs: reworkJobs });
+export type ChecklistAnswer = { item: string; pass: boolean };
+export const finalInspect = (card: string, result: 'PASS' | 'FAIL' | 'REWORK', remarks: string, reworkJobs: string[], checklist: ChecklistAnswer[] | null = null) =>
+  rpc('final_inspection', { p_card: card, p_result: result, p_remarks: remarks || null, p_rework_jobs: reworkJobs, p_checklist: checklist });
+export const finalInspectSelected = (cards: string[], result: 'PASS' | 'FAIL', remarks: string, checklist: ChecklistAnswer[] | null) =>
+  rpc<number>('final_inspection_selected', { p_cards: cards, p_result: result, p_remarks: remarks || null, p_checklist: checklist });
+
+/** the Final Inspection Master checklist that applies to a card (by its Schedule Code, or by the Job Codes of its Job IDs) */
+export async function loadFimForCard(cardId: string): Promise<Row | null> {
+  const [fims, chart, jobs] = await Promise.all([
+    all('fim_checklists', 'fim_code'),
+    supabase.from('v_schedule_chart').select('schedule_code').eq('job_card_id', cardId).limit(1).then((r) => (r.data ?? []) as Row[]),
+    supabase.from('job_ids').select('job_code_id').eq('job_card_id', cardId).then((r) => (r.data ?? []) as Row[]),
+  ]);
+  const codes: string[] = chart.map((c) => c.schedule_code);
+  if (jobs.length) {
+    const { data } = await supabase.from('maintenance_jobs').select('job_code').in('id', jobs.map((x) => x.job_code_id));
+    codes.push(...(data ?? []).map((d: Row) => d.job_code));
+  }
+  return fims.find((f) => f.status === 'ACTIVE' && f.applies_codes.some((c: string) => codes.includes(c))) ?? null;
+}
 
 export { friendlyError };

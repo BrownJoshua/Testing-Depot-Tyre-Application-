@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { completeJobId, startJobId, type Row } from '../../lib/jobs';
-import { holdJob, loadRound, resumeJob, STEP_LABEL, type RoundCtx } from '../../lib/rounds';
+import { completeWorkForm, holdJob, loadRound, resumeJob, setTyreUnavailable, STEP_LABEL, type RoundCtx, type WorkFormData } from '../../lib/rounds';
 import { createSrn, loadCardDocs, PART_LABEL, type CardDocs } from '../../lib/stock';
 import { Banner, btnPlain, btnPrimary } from '../../components/ui';
 import { CardBadge } from '../../components/OpsBits';
 import { HoldDlg } from './TmFleet';
 import { blankScrap, ScrapLines, type ScrapRow } from './TmStock';
+import { UnavailableDlg, WorkForm } from './WorkForm';
 
 const ORDER = ['JOB-008', 'JOB-011', 'JOB-010', 'JOB-009'];
 
@@ -22,6 +23,8 @@ export function TmWork() {
   const [busy, setBusy] = useState(false);
   const [holding, setHolding] = useState<Row | null>(null);
   const [review, setReview] = useState<Row | null>(null);
+  const [pendingForm, setPendingForm] = useState<WorkFormData | null>(null);
+  const [unavailable, setUnavailable] = useState<Row | null>(null);
   const [scrapYes, setScrapYes] = useState<boolean | null>(null);
   const [scrap, setScrap] = useState<ScrapRow[]>(blankScrap());
 
@@ -40,7 +43,7 @@ export function TmWork() {
 
   async function act(fn: () => Promise<unknown>, ok: string) {
     setBusy(true); setError(null); setNotice(null);
-    try { await fn(); setNotice(ok); setReview(null); setScrapYes(null); setScrap(blankScrap()); setHolding(null); load(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { await fn(); setNotice(ok); setReview(null); setPendingForm(null); setScrapYes(null); setScrap(blankScrap()); setHolding(null); setUnavailable(null); load(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
   if (!ctx || !docs) return error ? <Banner kind="error">{error}</Banner> : <p className="text-slate-500">Loading…</p>;
@@ -83,13 +86,16 @@ export function TmWork() {
                 {scrapYes && <ScrapLines rows={scrap} setRows={setScrap} />}
                 <div className="grid grid-cols-2 gap-2"><button className={`${btnPlain} min-h-12`} onClick={() => setReview(null)}>Back</button>
                   <button className={`${btnPrimary} min-h-12`} disabled={busy || scrapYes === null || (scrapYes && scrap.some((r) => !(Number(r.qty) > 0)))}
-                    onClick={() => void act(async () => { await completeJobId(j.id, null); if (scrapYes) await createSrn(card.id, scrap.map((r) => ({ material: r.material, qty: Number(r.qty), unit: r.unit })), ''); }, `${j.job_id_no} completed.`)}>Complete</button></div>
+                    onClick={() => void act(async () => { if (pendingForm) await completeWorkForm(j.id, pendingForm); else await completeJobId(j.id, null); if (scrapYes) await createSrn(card.id, scrap.map((r) => ({ material: r.material, qty: Number(r.qty), unit: r.unit })), ''); }, `${j.job_id_no} completed.`)}>Complete</button></div>
               </div>
             ) : mine(j) && (
               <div className="mt-2 grid grid-cols-1 gap-2">
                 {pendingGin && <Link to="/tm/grn" className={`${btnPlain} min-h-12 text-center leading-8`}>Receive GIN</Link>}
                 {j.status === 'ASSIGNED' && <button className={`${btnPrimary} min-h-12 text-base`} disabled={busy || blocked} onClick={() => void act(() => startJobId(j.id), `Work started on ${j.job_id_no}.`)}>Start {STEP_LABEL[code]?.toLowerCase()}</button>}
-                {j.status === 'STARTED' && <button className={`${btnPrimary} min-h-12 text-base`} disabled={busy} onClick={() => (isLast(j) ? (setReview(j), setScrapYes(null)) : void act(() => completeJobId(j.id, null), `${j.job_id_no} completed.`))}>Complete {STEP_LABEL[code]?.toLowerCase()}</button>}
+                {j.status === 'STARTED' && (
+                  <WorkForm key={j.id} code={code} tyreNo={tyreNo(j.tyre_id)} busy={busy} label={`Complete ${STEP_LABEL[code]?.toLowerCase()}`}
+                    onComplete={(d) => (isLast(j) ? (setReview(j), setPendingForm(d), setScrapYes(null)) : void act(() => completeWorkForm(j.id, d), `${j.job_id_no} completed.`))} />)}
+                {code === 'JOB-009' && ['ASSIGNED', 'STARTED'].includes(j.status) && <button className={`${btnPlain} min-h-12`} onClick={() => setUnavailable(j)}>Set tyre not available</button>}
                 {['ASSIGNED', 'STARTED'].includes(j.status) && !j.on_hold && <button className={`${btnPlain} min-h-12`} onClick={() => setHolding(j)}>Hold job</button>}
                 {j.on_hold && <button className={`${btnPlain} min-h-12`} disabled={busy} onClick={() => void act(() => resumeJob(j.id), 'Job resumed.')}>Resume</button>}
                 {['ASSIGNED', 'STARTED'].includes(j.status) && ['JOB-009', 'JOB-010'].includes(code) && <Link to={`/tm/wsr?card=${card.id}&job=${j.id}`} className={`${btnPlain} min-h-12 text-center leading-8`}>Raise extra WSR</Link>}
@@ -98,6 +104,7 @@ export function TmWork() {
           </div>
         );
       })}
+      {unavailable && <UnavailableDlg busy={busy} onClose={() => setUnavailable(null)} onSave={(r) => void act(() => setTyreUnavailable(unavailable.id, r), 'Complaint raised. The Tyre IC will provide another tyre.')} />}
       {holding && <HoldDlg onClose={() => setHolding(null)} onSave={(r) => void act(() => holdJob(holding.id, r), 'Job put on hold. The Tyre IC is informed.')} />}
     </div>
   );

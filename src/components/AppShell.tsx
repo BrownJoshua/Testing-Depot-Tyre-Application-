@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { NAV, ROLE_INFO } from '../lib/roles';
+import { Bell } from './Bell';
 
 /**
  * Shell for HO, AM, Supervisor and Tyre IC.
@@ -25,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Bell to={`${info.home}/notifications`} />
           <div className="hidden text-right text-sm sm:block">
             <div className="font-semibold">{me.full_name}</div>
             <div className="text-xs text-blue-100">{me.employee_code}</div>
