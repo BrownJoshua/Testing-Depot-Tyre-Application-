@@ -97,3 +97,13 @@ Push to `main` on GitHub. Netlify builds and publishes by itself. Deploy preview
 | "Invalid login" for a right password | wrong `VITE_AUTH_EMAIL_DOMAIN` | make it match the domain the accounts were created with |
 | Page not found after refresh | `netlify.toml` missing from the deploy | check it is in the repository root |
 | Lists are empty after login | the user is not linked to an employee, or RLS blocks | check the Employee ID in Supabase and the `profiles` table |
+
+## Installing the Tyre Man app on a phone
+
+The Tyre Man app is a web app that installs like a normal app (no app store). After the site is live on Netlify (it must be https):
+
+- **Android (Chrome):** open the site address, sign in as a Tyre Man, tap **Install** in the blue box at the top of My Jobs (or the browser menu, then Install app).
+- **iPhone (Safari):** open the address, tap the Share button, then **Add to Home Screen**.
+- The app opens full screen with its own icon. The camera is used for photos and for the **Scan** button beside the tyre number (Scan shows only on phones whose browser supports barcode scanning; otherwise the number is typed).
+- Without internet the app opens but shows no data; it needs the network to read and save work.
+- Updates reach the phone the next time the app is opened with internet.

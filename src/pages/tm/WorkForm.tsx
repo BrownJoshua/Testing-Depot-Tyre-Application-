@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ScanButton } from '../../components/ScanButton';
 import { WEAR_PATTERNS, type WorkFormData } from '../../lib/rounds';
 import { shrinkPhoto } from '../../lib/photo';
 import { Banner, btnPlain, btnPrimary, inputCls } from '../../components/ui';
@@ -32,7 +33,7 @@ export function WorkForm({ code, tyreNo, busy, onComplete, label }: { code: stri
     <div className="mt-2 space-y-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
       {err && <Banner kind="error">{err}</Banner>}
       <label className="block text-xs text-slate-600">Tyre number (scan or type) *
-        <input className={inputCls} autoCapitalize="characters" placeholder={tyreNo} value={d.scanned_no} onChange={(e) => set({ scanned_no: e.target.value })} /></label>
+        <span className="flex gap-2"><input className={inputCls} autoCapitalize="characters" placeholder={tyreNo} value={d.scanned_no} onChange={(e) => set({ scanned_no: e.target.value })} /><ScanButton onScan={(t) => set({ scanned_no: t })} /></span></label>
       {d.scanned_no.trim() !== '' && <p className={`text-xs font-semibold ${matches ? 'text-green-700' : 'text-red-700'}`}>{matches ? '✓ This is the right tyre' : '✗ This is not the tyre of this step'}</p>}
 
       {(code === 'JOB-008' || code === 'JOB-009') && <label className="block text-xs text-slate-600">Odometer (km) *

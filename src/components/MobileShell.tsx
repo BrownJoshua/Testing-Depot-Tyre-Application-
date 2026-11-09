@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { InstallHint } from './InstallHint';
 import { NavLink } from 'react-router-dom';
 import { CalendarDays, ClipboardList, LogOut, MessageSquareWarning, PackageCheck, PackagePlus, Smartphone, Trash2, Undo2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -51,7 +52,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
             <LogOut size={20} />
           </button>
         </header>
-        <main className="flex-1 p-4 pb-28">{children}</main>
+        <main className="flex-1 p-4 pb-28"><InstallHint />{children}</main>
         <nav className="fixed inset-x-0 bottom-0 flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
           {LIVE.map(({ label, Icon, to, end }) => (
             <NavLink key={label} to={to!} end={end}
