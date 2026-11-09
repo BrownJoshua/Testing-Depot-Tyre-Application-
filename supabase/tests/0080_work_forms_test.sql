@@ -6,7 +6,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -18,7 +18,7 @@ declare
   fr_a uuid; fl_a uuid; fr_b uuid; fl_b uuid; rot_a date; j record; w uuid; gin uuid; l1 uuid; l2 uuid; l3 uuid; rm uuid; mtc text; cs uuid; cr uuid; cs2 uuid; rep uuid; good uuid; msg text;
   pr text := 'data:image/jpeg;base64,AAAA';
 begin
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id into tm from public.employees where employee_code = 'TMAN';
   today := app.business_today();
   select id into sch from public.maintenance_schedules where schedule_code = 'SCH004';
   -- three fleets of the depot with both front tyres fitted and no open job card

@@ -43,7 +43,7 @@ export function Login() {
           spellCheck={false}
           value={employeeId}
           onChange={(e) => setEmployeeId(e.target.value)}
-          placeholder="e.g. TIC-1147"
+          placeholder="e.g. TIC"
           className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2.5 uppercase outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
         />
 

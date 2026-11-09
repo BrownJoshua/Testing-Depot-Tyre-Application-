@@ -5,7 +5,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -14,8 +14,8 @@ grant execute on function public.t_as(text) to authenticated;
 do $$
 declare ticid uuid; tm uuid; dep uuid; c1 uuid; c2 uuid; ok boolean; f1 uuid; f2 uuid; f3 uuid; sch uuid; ga uuid; gb uuid; n int; run uuid; items uuid[];
 begin
-  select id, org_unit_id into ticid, dep from public.employees where employee_code = 'TIC-1147';
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id, org_unit_id into ticid, dep from public.employees where employee_code = 'TIC';
+  select id into tm from public.employees where employee_code = 'TMAN';
   assert (select count(*) from public.fim_checklists) >= 7, 'FIM-001..007 seeded';
   assert exists (select 1 from public.master_entity_registry where entity_type = 'final_inspection_master' and is_enabled), 'FIM master enabled';
 

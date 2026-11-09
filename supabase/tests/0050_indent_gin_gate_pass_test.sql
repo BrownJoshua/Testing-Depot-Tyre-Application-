@@ -14,7 +14,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' when 'tm' then 'TM-3092' when 'adtic' then 'T50-TIC' else 'T50-SUP' end;
+   where e.employee_code = case who when 'sup' then 'SUPE' when 'tic' then 'TIC' when 'tm' then 'TMAN' when 'adtic' then 'T50-TIC' else 'T50-SUP' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;

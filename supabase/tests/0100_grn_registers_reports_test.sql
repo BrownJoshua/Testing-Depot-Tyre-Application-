@@ -6,7 +6,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'ho' then 'HOT-0114' when 'am' then 'HOT-AE-021' when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'ho' then 'HOT' when 'am' then 'HOTAE' when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -27,7 +27,7 @@ declare
   mn uuid; ad uuid; tic uuid; gin uuid; tys uuid[]; n int; v_no text; ok boolean; msg text; trs uuid[]; mic uuid; fl uuid; req uuid; norm uuid; tcol uuid; tyre uuid; r text; dr uuid; drn uuid;
 begin
   select id into mn from public.org_units where code = 'MN'; select id into ad from public.org_units where code = 'AD';
-  select id into tic from public.employees where employee_code = 'TIC-1147';
+  select id into tic from public.employees where employee_code = 'TIC';
 
   -- 11a. other depot -> our depot: partial receipt, reasons from the master, close the rest
   select array_agg(id) into tys from (select id from public.tyres where owner_org_unit_id = mn and stock_place = 'LIVE_STOCK' order by mtc_no limit 3) s;

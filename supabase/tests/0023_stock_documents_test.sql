@@ -1,6 +1,6 @@
 -- Test for migration 0023 (WSR / WSR GIN / GRN / MRN / SRN, Removal and Fitment Orders, Tyre Changing job cards).
 -- Safe to run: everything happens inside a transaction that is rolled back.
--- Uses the real demonstration accounts (TIC-1147, TM-3092, SUP-2231) and the seeded Mandaveli fleets J0264 and J0322.
+-- Uses the real demonstration accounts (TIC, TMAN, SUPE) and the seeded Mandaveli fleets J0264 and J0322.
 
 begin;
 
@@ -9,7 +9,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'ho' then 'HOT-0114' when 'am' then 'HOT-AE-021' when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'ho' then 'HOT' when 'am' then 'HOTAE' when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -20,8 +20,8 @@ declare
   n int; q numeric; tic uuid; tm uuid; f1 uuid; f2 uuid; depot uuid; card uuid; card2 uuid; card3 uuid; card4 uuid; r record; j record;
   t1 uuid; t2 uuid; t3 uuid; t4 uuid; l1 uuid; l2 uuid; l3 uuid; l4 uuid; l5 uuid; gin uuid; v_no text; pos1 text; pos2 text; ok boolean; msg text; w uuid; wl uuid; srn uuid; mrn uuid;
 begin
-  select id into tic from public.employees where employee_code = 'TIC-1147';
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id into tic from public.employees where employee_code = 'TIC';
+  select id into tm from public.employees where employee_code = 'TMAN';
   select id into f1 from public.fleets where fleet_no = 'J0264';
   select id into f2 from public.fleets where fleet_no = 'J0322';
   select org_unit_id into depot from public.employees where id = tic;

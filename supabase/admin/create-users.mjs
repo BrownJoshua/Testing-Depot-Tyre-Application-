@@ -2,7 +2,7 @@
 //
 //   Preview only (default, creates nothing):  node supabase/admin/create-users.mjs
 //   Actually create the accounts:             node supabase/admin/create-users.mjs --yes
-//   Only some employees:                      node supabase/admin/create-users.mjs --codes HOT-0114,TIC-1147 --yes
+//   Only some employees:                      node supabase/admin/create-users.mjs --codes HOT,TIC --yes
 //
 // Runs ONLY on the project owner's machine. It is not an ERP role and has no screen in the application.
 //

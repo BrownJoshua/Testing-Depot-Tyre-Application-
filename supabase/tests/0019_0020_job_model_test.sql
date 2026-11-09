@@ -1,6 +1,6 @@
 -- Test for migrations 0019 / 0020 (D1 job model: complaints with inspection, job cards, Job IDs, work, Final Inspection).
 -- Safe to run: everything happens inside a transaction that is rolled back.
--- Uses the real demonstration accounts (TIC-1147, TM-3092, SUP-2231, HOT-0114) and the seeded Mandaveli fleet J0264.
+-- Uses the real demonstration accounts (TIC, TMAN, SUPE, HOT) and the seeded Mandaveli fleet J0264.
 -- Success = no error.  Failure = an error naming the broken expectation.
 
 begin;
@@ -16,7 +16,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'ho' then 'HOT-0114' when 'am' then 'HOT-AE-021' when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' when 'tm' then 'TM-3092' else 'T10-TIC2' end;
+   where e.employee_code = case who when 'ho' then 'HOT' when 'am' then 'HOTAE' when 'sup' then 'SUPE' when 'tic' then 'TIC' when 'tm' then 'TMAN' else 'T10-TIC2' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -27,8 +27,8 @@ declare
   n int; fl uuid; tyres uuid[]; ty_fr uuid; ty_rri uuid; ty_other_fleet uuid; ctype_valve uuid; ctype_nolink2 uuid; ctype_linked uuid;
   c1 uuid; c2 uuid; c_tm uuid; card uuid; card2 uuid; ins uuid; ins2 uuid; jids uuid[]; r record; tm uuid; tic uuid; j1 uuid; shift_id uuid; newj uuid; comp record;
 begin
-  select id into tm from public.employees where employee_code = 'TM-3092';
-  select id into tic from public.employees where employee_code = 'TIC-1147';
+  select id into tm from public.employees where employee_code = 'TMAN';
+  select id into tic from public.employees where employee_code = 'TIC';
   select id into fl from public.fleets where fleet_no = 'J0264';
   select id into ty_fr from public.tyres where fleet_id = fl and fitted_position = 'FR';
   select id into ty_rri from public.tyres where fleet_id = fl and fitted_position = 'RRI';

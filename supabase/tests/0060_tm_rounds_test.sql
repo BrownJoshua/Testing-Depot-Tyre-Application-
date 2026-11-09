@@ -6,7 +6,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -15,7 +15,7 @@ grant execute on function public.t_as(text) to authenticated;
 do $$
 declare n int; tm uuid; f uuid; tyre_ids uuid[]; card uuid; card2 uuid; card3 uuid; j record; ok boolean; v_nsd numeric; fr uuid;
 begin
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id into tm from public.employees where employee_code = 'TMAN';
   select id into f from public.fleets where fleet_no = 'J0322';
   select array_agg(id order by fitted_position) into tyre_ids from public.tyres where fleet_id = f and stock_place = 'FITTED';
   assert cardinality(tyre_ids) >= 4, 'test data: fitted tyres';

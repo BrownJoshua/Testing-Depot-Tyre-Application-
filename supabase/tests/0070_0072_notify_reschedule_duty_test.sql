@@ -6,7 +6,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'ho' then 'HOT-0114' when 'am' then 'HOT-AE-021' when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'ho' then 'HOT' when 'am' then 'HOTAE' when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -17,8 +17,8 @@ declare
   tic uuid; tm uuid; f1 uuid; ctype uuid; cmp uuid; card uuid; card2 uuid; n int; ok boolean; today date; req uuid; ty uuid; d date;
   sch uuid; run uuid; items uuid[]; r jsonb; v_old uuid;
 begin
-  select id into tic from public.employees where employee_code = 'TIC-1147';
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id into tic from public.employees where employee_code = 'TIC';
+  select id into tm from public.employees where employee_code = 'TMAN';
   select id into f1 from public.fleets where fleet_no = 'J0264';
   select id into ctype from public.complaint_types where status = 'ACTIVE' order by complaint_code limit 1;
   select id into sch from public.maintenance_schedules where schedule_code = 'SCH001';

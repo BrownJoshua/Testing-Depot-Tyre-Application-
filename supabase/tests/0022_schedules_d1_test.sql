@@ -14,7 +14,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'ho' then 'HOT-0114' when 'am' then 'HOT-AE-021' when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' when 'tm' then 'TM-3092' else 'T11-TIC2' end;
+   where e.employee_code = case who when 'ho' then 'HOT' when 'am' then 'HOTAE' when 'sup' then 'SUPE' when 'tic' then 'TIC' when 'tm' then 'TMAN' else 'T11-TIC2' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -42,8 +42,8 @@ declare
   n int; f1 uuid; f2 uuid; fad uuid; sch_air uuid; sch_cen uuid; sch_rot uuid; sch_dis uuid; sch_inactive uuid; run1 uuid; run_c uuid; run_r uuid; items uuid[]; r record;
   tm uuid; tic uuid; today date; card record; tyre_fr uuid; tyre_fl uuid; sch_new uuid; item1 uuid; fr_card uuid;
 begin
-  select id into tm from public.employees where employee_code = 'TM-3092';
-  select id into tic from public.employees where employee_code = 'TIC-1147';
+  select id into tm from public.employees where employee_code = 'TMAN';
+  select id into tic from public.employees where employee_code = 'TIC';
   select id into f1 from public.fleets where fleet_no = 'J0264';
   select id into f2 from public.fleets where fleet_no = 'J0322';
   select id into fad from public.fleets where org_unit_id = (select id from public.org_units where code = 'AD') and status = 'ACTIVE' limit 1;

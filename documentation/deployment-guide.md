@@ -46,7 +46,7 @@ This app signs in with Employee ID and password only (no email links), so no ema
 
 1. Open the Netlify address. The login screen must appear.
 2. Refresh on a deep address such as `/tic/job-cards`: it must not show "Page not found" (the rule in `netlify.toml` handles this).
-3. Sign in as each role (see `.demo-logins.local` on your computer): `HOT-0114` (HO), `HOT-AE-021` (AM), `SUP-2231`, `TIC-1147`, `TM-3092` (open the Tyre Man on a phone).
+3. Sign in as each role (see `.demo-logins.local` on your computer): `HOT` (HO), `HOTAE` (AM), `SUPE`, `TIC`, `TMAN` (open the Tyre Man on a phone).
 4. The Tyre IC dashboard shows numbers.
 
 ## Everyday tasks

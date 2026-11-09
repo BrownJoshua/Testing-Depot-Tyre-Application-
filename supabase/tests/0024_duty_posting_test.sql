@@ -6,7 +6,7 @@ declare v_sub text;
 begin
   execute 'reset role';
   select p.id::text into v_sub from public.profiles p join public.employees e on e.id = p.employee_id
-   where e.employee_code = case who when 'sup' then 'SUP-2231' when 'tic' then 'TIC-1147' else 'TM-3092' end;
+   where e.employee_code = case who when 'sup' then 'SUPE' when 'tic' then 'TIC' else 'TMAN' end;
   perform set_config('request.jwt.claims', format('{"sub":"%s","role":"authenticated"}', v_sub), true);
   execute 'set local role authenticated';
 end $$;
@@ -15,7 +15,7 @@ grant execute on function public.t_as(text) to authenticated;
 do $$
 declare n int; tm uuid; sch uuid; job uuid; d date; wo date; ok boolean; days date[];
 begin
-  select id into tm from public.employees where employee_code = 'TM-3092';
+  select id into tm from public.employees where employee_code = 'TMAN';
   select id into sch from public.maintenance_schedules where schedule_code = 'SCH001';
   select id into job from public.maintenance_jobs where job_code = 'JOB-001';
   select count(*) into n from public.hrms_roster where employee_id = tm; assert n = 122, 'roster Sep-Dec for the Tyre Man: ' || n;
