@@ -25,7 +25,7 @@ export interface NavItem {
 
 export const NAV: Record<RoleCode, NavItem[]> = {
   HO: [
-    { label: 'Dashboard', arrives: 'Stage 7' },
+    { label: 'Dashboard', arrives: 'Stage 7', path: '/ho/dashboard' },
     { label: 'Vendor Master', arrives: 'Stage 4', path: '/ho/vendors' },
     { label: 'Tyre Folio', arrives: 'Stage 4', path: '/ho/m/tyre-folio' },
     { label: 'Tyre sizes', arrives: 'Stage 4', path: '/ho/m/tyre-sizes' },
@@ -42,7 +42,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Purchase Indent', arrives: 'Stage 4' },
     { label: 'Allocation Requests', arrives: 'Stage 4' },
     { label: 'Maintenance Pending', arrives: 'Stage 4' },
-    { label: 'Reports', arrives: 'Stage 7' },
+    { label: 'Reports', arrives: 'Stage 7', path: '/ho/reports' },
   ],
   AM: [
     { label: 'Master change approvals', arrives: 'Stage 4', path: '/am/approvals' },
@@ -59,9 +59,11 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Maintenance jobs (read)', arrives: 'Stage 5a', path: '/am/m/maintenance-jobs' },
     { label: 'Complaint Master (read)', arrives: 'Stage 5a', path: '/am/m/complaint-types' },
     { label: 'Maintenance schedules (read)', arrives: 'Stage 5a', path: '/am/m/schedules' },
-    { label: 'Dashboard', arrives: 'Stage 7' },
+    { label: 'Dashboard', arrives: 'Stage 7', path: '/am/dashboard' },
+    { label: 'Reports', arrives: 'Stage 7', path: '/am/reports' },
   ],
   SUP: [
+    { label: 'Dashboard', arrives: 'Stage 7', path: '/sup/dashboard' },
     { label: 'Grouping Approvals', arrives: 'Stage 5a', path: '/sup/grouping' },
     { label: 'Schedule Planner (monitor)', arrives: 'Stage 5a', path: '/sup/planner' },
     { label: 'GIN / Indent / Skill approvals', arrives: 'Stage 5b' },
@@ -69,9 +71,10 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Log Sheet Complaints', arrives: 'Stage 5a', path: '/sup/complaints' },
     { label: 'Fleet Register', arrives: 'Stage 5a', path: '/sup/m/fleets' },
     { label: 'Tyre Register', arrives: 'Stage 5b', path: '/sup/tyres' },
+    { label: 'Reports', arrives: 'Stage 7', path: '/sup/reports' },
   ],
   TIC: [
-    { label: 'Dashboard', arrives: 'Stage 5a' },
+    { label: 'Dashboard', arrives: 'Stage 7', path: '/tic/dashboard' },
     { label: 'Job Card Register', arrives: 'Stage 5a', path: '/tic/job-cards' },
     { label: 'Complaints', arrives: 'Stage 5a', path: '/tic/complaints' },
     { label: 'Schedule Planner', arrives: 'Stage 5a', path: '/tic/planner' },
@@ -83,6 +86,7 @@ export const NAV: Record<RoleCode, NavItem[]> = {
     { label: 'Material Return GRN', arrives: 'Stage 5b', path: '/tic/material-return' },
     { label: 'Scrap Return Note', arrives: 'Stage 5b', path: '/tic/srn' },
     { label: 'Tyre Register', arrives: 'Stage 5b', path: '/tic/tyres' },
+    { label: 'Reports', arrives: 'Stage 7', path: '/tic/reports' },
   ],
   TM: [
     { label: 'My Jobs', arrives: 'Stage 6', path: '/tm' },

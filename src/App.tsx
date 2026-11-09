@@ -14,6 +14,8 @@ import { TmGrn, TmMrn, TmSrn, TmWsr } from './pages/tm/TmStock';
 import { FleetGrouping } from './pages/FleetGrouping';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { TyreRegister } from './pages/TyreRegister';
+import { Dashboard } from './pages/Dashboard';
+import { Reports } from './pages/Reports';
 import { SchedulePlanner } from './pages/SchedulePlanner';
 import { ReturnGrnPage, SrnPage, WsrPage } from './pages/StockDocs';
 import { TmComplaint } from './pages/tm/TmComplaint';
@@ -33,6 +35,8 @@ export default function App() {
       <Route path="/ho/*"  element={<ProtectedRoute allow="HO"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="reports" element={<Reports />} />
           <Route index element={<RoleHome />} />
           <Route path="vendors" element={<VendorList />} />
           <Route path="vendors/new" element={<VendorForm />} />
@@ -47,6 +51,8 @@ export default function App() {
       <Route path="/am/*"  element={<ProtectedRoute allow="AM"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="reports" element={<Reports />} />
           <Route index element={<RoleHome />} />
           <Route path="approvals" element={<ApprovalInbox mode="pending" />} />
           <Route path="history" element={<ApprovalInbox mode="history" />} />
@@ -58,6 +64,8 @@ export default function App() {
       <Route path="/sup/*" element={<ProtectedRoute allow="SUP"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="planner" element={<SchedulePlanner />} />
           <Route index element={<RoleHome />} />
           <Route path="grouping" element={<FleetGrouping />} />
@@ -73,6 +81,8 @@ export default function App() {
       <Route path="/tic/*" element={<ProtectedRoute allow="TIC"><AppShell>
         <Routes>
           <Route path="tyres" element={<TyreRegister />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="planner" element={<SchedulePlanner />} />
           <Route path="wsr" element={<WsrPage />} />
           <Route path="material-return" element={<ReturnGrnPage />} />
